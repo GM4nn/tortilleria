@@ -12,7 +12,6 @@ class InventoryContent(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.db = app.db
-        self.selected_product_id = None
 
         self.setup_ui()
 
