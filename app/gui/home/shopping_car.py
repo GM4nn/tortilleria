@@ -68,23 +68,46 @@ class ShoppingCar(ttk.Frame):
     def _create_canvas(self):
         """Create or recreate the canvas with scrollbar"""
         # Canvas and scrollbar
-        self.canvas = ttk.Canvas(self.canvas_frame, highlightthickness=0)
+        self.canvas = ttk.Canvas(self.canvas_frame, highlightthickness=0, borderwidth=0)
         self.scrollbar = ttk.Scrollbar(self.canvas_frame, orient=VERTICAL, command=self.canvas.yview)
 
         self.scrollable_frame = ttk.Frame(self.canvas)
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
 
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas_window = self.canvas.create_window(0, 0, window=self.scrollable_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
+        # Update scroll region properly
+        def _on_frame_configure(event):
+            # Get the bounding box of all content
+            bbox = self.canvas.bbox("all")
+            if bbox:
+                # Only allow scrolling if content is taller than canvas
+                canvas_height = self.canvas.winfo_height()
+                content_height = bbox[3]  # bbox is (x1, y1, x2, y2)
+
+                if content_height > canvas_height:
+                    # Content is larger, allow scrolling
+                    self.canvas.configure(scrollregion=bbox)
+                else:
+                    # Content is smaller, set scrollregion to canvas size to prevent scroll
+                    self.canvas.configure(scrollregion=(0, 0, bbox[2], canvas_height))
+
+        self.scrollable_frame.bind("<Configure>", _on_frame_configure)
+
         # Adjust scrollable_frame width to canvas
-        self.canvas.bind(
-            "<Configure>",
-            lambda e: self.canvas.itemconfig(self.canvas_window, width=e.width)
-        )
+        def _on_canvas_configure(event):
+            self.canvas.itemconfig(self.canvas_window, width=event.width)
+            # Also update scrollregion when canvas resizes
+            bbox = self.canvas.bbox("all")
+            if bbox:
+                canvas_height = event.height
+                content_height = bbox[3]
+                if content_height > canvas_height:
+                    self.canvas.configure(scrollregion=bbox)
+                else:
+                    self.canvas.configure(scrollregion=(0, 0, bbox[2], canvas_height))
+
+        self.canvas.bind("<Configure>", _on_canvas_configure)
 
         # Enable mouse wheel scrolling
         self.canvas.bind("<Enter>", lambda e: self._bind_mousewheel())
@@ -99,7 +122,7 @@ class ShoppingCar(ttk.Frame):
             font=("Arial", 20),
             bootstyle="secondary"
         )
-        self.lbl_vacio.pack(pady=50)
+        self.lbl_vacio.pack(pady=(0, 10))
 
 
     def action_buttons(self):
@@ -147,6 +170,9 @@ class ShoppingCar(ttk.Frame):
         # Recreate canvas from scratch (scroll resets automatically)
         self._create_canvas()
 
+        # Reset scroll to top after recreation
+        self.canvas.yview_moveto(0)
+
         if not self.content.shopping_cart:
             self.lbl_total.config(text="$0.00")
             self.lbl_items.config(text="0 items")
@@ -175,7 +201,9 @@ class ShoppingCar(ttk.Frame):
             relief="solid",
             borderwidth=1
         )
-        item_frame.pack(fill=X, expand=NO, pady=5, padx=0)
+        # First item has no top padding, rest have 5px top padding
+        pady = (0, 5) if index == 0 else 5
+        item_frame.pack(fill=X, expand=NO, pady=pady, padx=0)
 
         content_frame = ttk.Frame(item_frame)
         content_frame.pack(fill=X, expand=YES, padx=10, pady=10)

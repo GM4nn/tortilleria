@@ -20,10 +20,11 @@ class ProductsInventory(ttk.Frame):
         self.left_frame = ttk.Frame(self.main_container)
         self.left_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(0, 10))
 
+        self.setup_header()
         self.setup_table_section()
 
 
-    def setup_table_section(self):
+    def setup_header(self):
 
         header = ttk.Frame(self.left_frame)
         header.pack(fill=X, pady=(0, 10))
@@ -47,10 +48,10 @@ class ProductsInventory(ttk.Frame):
             textvariable=self.search_var,
             width=25
         )
-        search_entry.pack(side=LEFT)
+        search_entry.pack(side=RIGHT)
 
-        table_frame = ttk.Frame(self.left_frame)
-        table_frame.pack(fill=BOTH, expand=YES)
+
+    def setup_table_section(self):
 
         columns = [
             {"text": "ID", "stretch": False, "width": 60},
@@ -58,6 +59,9 @@ class ProductsInventory(ttk.Frame):
             {"text": "Precio", "stretch": False, "width": 100},
             {"text": "Estado", "stretch": False, "width": 100}
         ]
+
+        table_frame = ttk.Frame(self.left_frame)
+        table_frame.pack(fill=BOTH, expand=YES)
 
         self.table = Tableview(
             master=table_frame,
@@ -71,10 +75,8 @@ class ProductsInventory(ttk.Frame):
         )
         self.table.pack(fill=BOTH, expand=YES)
 
-        # Eventos de selección
         self.table.view.bind('<<TreeviewSelect>>', self.on_product_select)
 
-        # Botón para refrescar
         btn_frame = ttk.Frame(self.left_frame)
         btn_frame.pack(fill=X, pady=(10, 0))
 
@@ -87,30 +89,8 @@ class ProductsInventory(ttk.Frame):
         ).pack(side=LEFT)
 
 
-    def display_products(self, products):
-        """Mostrar productos en la tabla"""
-        # Limpiar tabla
-        self.table.delete_rows()
-
-        # Agregar productos
-        rows = []
-        for product in products:
-            estado = "Activo" if product.get('active', 1) == 1 else "Inactivo"
-            rows.append([
-                product['id'],
-                product['name'],
-                f"${product['price']:.2f}",
-                estado
-            ])
-
-        if rows:
-            self.table.insert_rows(0, rows)
-
-        self.table.load_table_data()
-
-
     def filter_products(self):
-        """Filtrar productos según búsqueda"""
+
         search_term = self.search_var.get().lower()
 
         if not search_term:
@@ -128,12 +108,11 @@ class ProductsInventory(ttk.Frame):
 
 
     def on_product_select(self, _event):
-        """Manejar selección de producto en la tabla"""
+
         selection = self.table.view.selection()
         if not selection:
             return
 
-        # Obtener datos del producto seleccionado
         item = self.table.view.item(selection[0])
         values = item['values']
 
@@ -144,7 +123,6 @@ class ProductsInventory(ttk.Frame):
         product_name = values[1]
         product_price = values[2].replace('$', '')
 
-        # Comunicar al formulario del padre
         if hasattr(self.parent, 'form_section'):
             form = self.parent.form_section
             form.selected_product_id = product_id
@@ -154,12 +132,33 @@ class ProductsInventory(ttk.Frame):
 
 
     def clear_selection(self):
-        """Limpiar selección en la tabla"""
+
         for item in self.table.view.selection():
             self.table.view.selection_remove(item)
 
+
+    def display_products(self, products):
+
+        self.table.delete_rows()
+
+        rows = []
+        for product in products:
+            estado = "Activo" if product.get('active', 1) == 1 else "Inactivo"
+            rows.append([
+                product['id'],
+                product['name'],
+                f"${product['price']:.2f}",
+                estado
+            ])
+
+        if rows:
+            self.table.insert_rows(0, rows)
+
+        self.table.load_table_data()
+
+
     def load_products(self):
-        """Cargar productos desde la base de datos"""
+
         products = self.db.get_products()
         self.all_products = []
 
