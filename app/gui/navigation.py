@@ -4,10 +4,12 @@ Módulo de Navegación - Panel izquierdo con botones
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from app.gui.customers.content import CustomersContent
 from app.gui.home.content import HomeContent
 from app.gui.inventory.content import InventoryContent
 from app.gui.reports.content import ReportsContent
 from app.gui.sales.content import SalesContent
+from app.gui.suppliers.content import SuppliersContent
 
 
 class Navigation(ttk.Frame):
@@ -76,6 +78,24 @@ class Navigation(ttk.Frame):
             width=18
         )
         self.btn_inventory.pack(pady=10, padx=10, ipady=10)
+        
+        self.btn_customers = ttk.Button(
+            self,
+            text="👥 Clientes",
+            command=lambda: self.change_view("customers"),
+            bootstyle="danger",
+            width=18
+        )
+        self.btn_customers.pack(pady=10, padx=10, ipady=10)
+
+        self.btn_suppliers = ttk.Button(
+            self,
+            text="🚚 Proveedores",
+            command=lambda: self.change_view("suppliers"),
+            bootstyle="warning",
+            width=18
+        )
+        self.btn_suppliers.pack(pady=10, padx=10, ipady=10)
 
 
     def change_view(self, vista):
@@ -96,4 +116,12 @@ class Navigation(ttk.Frame):
             self.app.content.pack(fill=BOTH, expand=YES)
         elif vista == "inventory":
             self.app.content = InventoryContent(self.app.content_container, self.app)
+            self.app.content.pack(fill=BOTH, expand=YES)
+        elif vista == "customers":
+            print("clientes")
+            self.app.content = CustomersContent(self.app.content_container, self.app)
+            self.app.content.pack(fill=BOTH, expand=YES)
+        elif vista == "suppliers":
+            print("proveedores")
+            self.app.content = SuppliersContent(self.app.content_container, self.app)
             self.app.content.pack(fill=BOTH, expand=YES)
