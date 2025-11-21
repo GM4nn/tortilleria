@@ -15,6 +15,7 @@ class FormInventory(ttk.Frame):
         self.parent = parent
         self.db = app.db
         self.main_container = main_container
+        self.selected_product_id = None
 
         self.setup_ui()
 
