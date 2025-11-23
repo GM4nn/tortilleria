@@ -13,7 +13,6 @@ class CustomersContent(ttk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent)
         self.app = app
-        self.db = app.db
 
         self.setup_ui()
 

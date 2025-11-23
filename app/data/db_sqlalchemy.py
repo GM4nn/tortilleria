@@ -13,8 +13,6 @@ class DatabaseManager:
     def __init__(self, db_name="tortilleria.db"):
         """Initialize database and create tables if they don't exist"""
 
-        init_db()
-
         self._add_default_products()
 
     def _get_session(self) -> Session:

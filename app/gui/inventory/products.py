@@ -1,6 +1,7 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.tableview import Tableview
+from app.data.providers.inventory import inventory_provider
 
 
 class ProductsInventory(ttk.Frame):
@@ -8,7 +9,7 @@ class ProductsInventory(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.parent = parent
-        self.db = self.app.db
+        self.provider = inventory_provider
         self.main_container = main_container
 
         self.setup_ui()
@@ -159,7 +160,7 @@ class ProductsInventory(ttk.Frame):
 
     def load_products(self):
 
-        products = self.db.get_products()
+        products = self.provider.get_all()
         self.all_products = []
 
         for product_id, name, price in products:
