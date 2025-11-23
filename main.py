@@ -1,17 +1,14 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from app.data.db import DatabaseManager
 from app.gui.navigation import Navigation
+from app.data.providers.inventory import inventory_provider
 
 
 class TortilleriaApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Sistema Tortillería - POS")
+        self.root.title("Tortillería Tierra Del Campo")
         self.root.geometry("1200x700")
-        
-        # Init DB
-        self.db = DatabaseManager()
         
         # Main Container
         main_container = ttk.Frame(root)
@@ -27,10 +24,13 @@ class TortilleriaApp:
         self.content_container.pack(side=LEFT, fill=BOTH, expand=YES)
 
         # Default View Products
-        self.navigation.change_view("products")
+        self.navigation.change_view("sales")
 
 
 def main():
+    # Initialize default products if database is empty
+    inventory_provider._add_default_products()
+
     root = ttk.Window(themename="flatly")
     TortilleriaApp(root)
     root.mainloop()

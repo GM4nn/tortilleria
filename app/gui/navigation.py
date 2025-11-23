@@ -5,7 +5,6 @@ Módulo de Navegación - Panel izquierdo con botones
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.gui.customers.content import CustomersContent
-from app.gui.home.content import HomeContent
 from app.gui.inventory.content import InventoryContent
 from app.gui.reports.content import ReportsContent
 from app.gui.sales.content import SalesContent
@@ -20,7 +19,6 @@ class Navigation(ttk.Frame):
 
 
     def setup_ui(self):
-        """Configurar interfaz de navegación"""
         
         self.title()
         self.buttons_navigation()
@@ -30,10 +28,10 @@ class Navigation(ttk.Frame):
 
         header = ttk.Label(
             self,
-            text="TORTILLERÍA",
+            text="Tierra del Campo",
             font=("Arial", 16, "bold"),
             bootstyle="inverse-dark",
-            padding=(30, 0)
+            padding=(15, 0)
         )
         header.pack(pady=20)
         
@@ -41,16 +39,6 @@ class Navigation(ttk.Frame):
 
 
     def buttons_navigation(self):
-
-        self.btn_products = ttk.Button(
-            self,
-            text="📦 Productos",
-            command=lambda: self.change_view("products"),
-            bootstyle="primary",
-            width=18
-        )
-
-        self.btn_products.pack(pady=(20,10), padx=10, ipady=10)
         
         self.btn_sales = ttk.Button(
             self,
@@ -105,10 +93,7 @@ class Navigation(ttk.Frame):
         if self.app.content:
             self.app.content.destroy()
 
-        if vista == "products":
-            self.app.content = HomeContent(self.app.content_container, self.app)
-            self.app.content.pack(fill=BOTH, expand=YES)
-        elif vista == "sales":            
+        if vista == "sales":            
             self.app.content = SalesContent(self.app.content_container, self.app)
             self.app.content.pack(fill=BOTH, expand=YES)
         elif vista == "reports":

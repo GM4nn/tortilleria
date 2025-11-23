@@ -5,6 +5,7 @@ from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from app.data.providers.customers import customer_provider
 
 
 class CustomersForm(ttk.Frame):
@@ -13,7 +14,7 @@ class CustomersForm(ttk.Frame):
 
         self.app = app
         self.parent = parent
-        self.db = app.db
+        self.provider = customer_provider
         self.main_container = main_container
         self.selected_customer_id = None
 
@@ -306,7 +307,7 @@ class CustomersForm(ttk.Frame):
 
         if self.selected_customer_id is None:
 
-            success, result = self.db.add_customer(name, direction, category, photo, phone)
+            success, result = self.provider.add(name, direction, category, photo, phone)
 
             if success:
                 messagebox.showinfo("Éxito", "Cliente creado exitosamente")
@@ -318,7 +319,7 @@ class CustomersForm(ttk.Frame):
                 messagebox.showerror("Error", f"No se pudo crear el cliente: {result}")
         else:
             # Update existing customer
-            success, result = self.db.update_customer(
+            success, result = self.provider.update(
                 self.selected_customer_id, name, direction, category, photo, phone
             )
             if success:
@@ -345,7 +346,7 @@ class CustomersForm(ttk.Frame):
         if not confirm:
             return
 
-        success, result = self.db.delete_customer(self.selected_customer_id)
+        success, result = self.provider.delete(self.selected_customer_id)
 
         if success:
             messagebox.showinfo("Éxito", "Cliente eliminado exitosamente")

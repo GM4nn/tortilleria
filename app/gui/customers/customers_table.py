@@ -1,6 +1,7 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.tableview import Tableview
+from app.data.providers.customers import customer_provider
 
 
 class CustomersTable(ttk.Frame):
@@ -8,7 +9,7 @@ class CustomersTable(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.parent = parent
-        self.db = self.app.db
+        self.provider = customer_provider
         self.main_container = main_container
 
         self.setup_ui()
@@ -169,7 +170,7 @@ class CustomersTable(ttk.Frame):
 
     def load_customers(self):
 
-        customers = self.db.get_customers()
+        customers = self.provider.get_all()
         self.all_customers = []
 
         for customer_id, name, direction, category, photo, phone, created_at, updated_at in customers:

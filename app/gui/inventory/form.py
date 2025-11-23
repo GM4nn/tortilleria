@@ -1,19 +1,16 @@
-
-
 from tkinter import messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-
-from app.gui.inventory.products import ProductsInventory
+from app.data.providers.inventory import inventory_provider
 
 
 class FormInventory(ttk.Frame):
     def __init__(self, parent, app, main_container):
         super().__init__(parent)
-        
+
         self.app = app
         self.parent = parent
-        self.db = app.db
+        self.provider = inventory_provider
         self.main_container = main_container
         self.selected_product_id = None
 
@@ -138,8 +135,8 @@ class FormInventory(ttk.Frame):
             return
 
         if self.selected_product_id is None:
-            success, result = self.db.add_product(name, price)
-            
+            success, result = self.provider.add(name, price)
+
             if success:
                 messagebox.showinfo("Éxito", "Producto creado exitosamente")
                 self.clear_form()
@@ -150,7 +147,7 @@ class FormInventory(ttk.Frame):
                 messagebox.showerror("Error", f"No se pudo crear el producto: {result}")
         else:
 
-            success, result = self.db.update_product(self.selected_product_id, name, price)
+            success, result = self.provider.update(self.selected_product_id, name, price)
             if success:
                 messagebox.showinfo("Éxito", "Producto actualizado exitosamente")
                 self.clear_form()
@@ -175,8 +172,8 @@ class FormInventory(ttk.Frame):
         if not confirm:
             return
 
-        success, result = self.db.delete_product(self.selected_product_id)
-        
+        success, result = self.provider.delete(self.selected_product_id)
+
         if success:
             messagebox.showinfo("Éxito", "Producto eliminado exitosamente")
             self.clear_form()
