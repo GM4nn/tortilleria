@@ -76,7 +76,14 @@ class SalesContent(ttk.Frame):
             mb.showwarning("Carrito vacío", "No hay productos en el carrito")
             return
 
-        success, result = self.sales_provider.save(self.shopping_cart, self.total)
+        # Obtener el customer_id seleccionado
+        customer_id = self.shopping_cart_gui.get_selected_customer_id()
+
+        if not customer_id:
+            mb.showerror("Error", "No se pudo obtener el cliente. Por favor, intente de nuevo.")
+            return
+
+        success, result = self.sales_provider.save(self.shopping_cart, self.total, customer_id)
 
         if success:
             mb.showinfo(
@@ -84,7 +91,7 @@ class SalesContent(ttk.Frame):
                 f"Venta #{result} registrada\n\nTotal: ${self.total:.2f}"
             )
             self.clean_shopping_car()
-            
+
         else:
             mb.showerror("Error", f"Error al guardar venta:\n{result}")
 

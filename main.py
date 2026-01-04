@@ -2,6 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.gui.navigation import Navigation
 from app.data.providers.inventory import inventory_provider
+from app.data.providers.customers import customer_provider
 
 
 class TortilleriaApp:
@@ -31,6 +32,9 @@ class TortilleriaApp:
 def main():
     # Initialize default products if database is empty
     inventory_provider._add_default_products()
+
+    # Initialize generic Mostrador customer (hidden from user)
+    customer_provider._create_generic_mostrador_customer()
 
     root = ttk.Window(themename="flatly")
     TortilleriaApp(root)

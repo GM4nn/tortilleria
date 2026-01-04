@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, DateTime
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.data.database import Base
@@ -10,9 +10,11 @@ class Sale(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column(DateTime, default=func.now())
     total = Column(Float, nullable=False)
+    customer_id = Column(Integer, ForeignKey('customers.id'), nullable=False)
 
-    # Relationship
+    # Relationships
     sales_details = relationship('SaleDetail', back_populates='sale', cascade='all, delete-orphan')
+    customer = relationship('Customer', backref='sales')
 
     def __repr__(self):
-        return f"<Sale(id={self.id}, date={self.date}, total={self.total})>"
+        return f"<Sale(id={self.id}, date={self.date}, total={self.total}, customer_id={self.customer_id})>"
