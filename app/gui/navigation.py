@@ -11,6 +11,7 @@ from app.gui.reports.content import ReportsContent
 from app.gui.sales.content import SalesContent
 from app.gui.suppliers.content import SuppliersContent
 from app.gui.supplies.content import SuppliesContent
+from app.gui.ai_assistant.content import AIAssistantContent
 
 
 class Navigation(ttk.Frame):
@@ -113,6 +114,15 @@ class Navigation(ttk.Frame):
         )
         self.btn_supplies.pack(pady=10, padx=10, ipady=10)
 
+        self.btn_ai_assistant = ttk.Button(
+            self,
+            text="🤖 Asistente IA",
+            command=lambda: self.change_view("ai_assistant"),
+            bootstyle="dark",
+            width=18
+        )
+        self.btn_ai_assistant.pack(pady=10, padx=10, ipady=10)
+
 
     def change_view(self, vista):
         """Cambiar la vista del panel central"""
@@ -131,14 +141,14 @@ class Navigation(ttk.Frame):
             self.app.content = InventoryContent(self.app.content_container, self.app)
             self.app.content.pack(fill=BOTH, expand=YES)
         elif vista == "customers":
-            print("clientes")
             self.app.content = CustomersContent(self.app.content_container, self.app)
             self.app.content.pack(fill=BOTH, expand=YES)
         elif vista == "suppliers":
-            print("proveedores")
             self.app.content = SuppliersContent(self.app.content_container, self.app)
             self.app.content.pack(fill=BOTH, expand=YES)
         elif vista == "supplies":
-            print("insumos")
             self.app.content = SuppliesContent(self.app.content_container, self.app)
+            self.app.content.pack(fill=BOTH, expand=YES)
+        elif vista == "ai_assistant":
+            self.app.content = AIAssistantContent(self.app.content_container)
             self.app.content.pack(fill=BOTH, expand=YES)
