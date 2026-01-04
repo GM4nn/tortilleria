@@ -8,11 +8,11 @@ from datetime import datetime
 class SaleProvider:
 
 
-    def save(self, items, total):
+    def save(self, items, total, customer_id):
 
         db = get_db()
         try:
-            sale = Sale(total=total)
+            sale = Sale(total=total, customer_id=customer_id)
             db.add(sale)
             db.flush()
 
