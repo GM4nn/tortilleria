@@ -35,6 +35,7 @@ class SupplyPurchase(Base):
     unit = Column(String(50), nullable=False)  # Unidad (kilos, litros, piezas, costales, etc.)
     unit_price = Column(Float, nullable=False)  # Precio por unidad
     total_price = Column(Float, nullable=False)  # Precio total
+    initial_stock = Column(Float, nullable=False, default=0.0)  # Stock acumulado ANTES de esta compra (restante de compras anteriores)
     notes = Column(Text)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

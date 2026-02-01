@@ -1,21 +1,19 @@
-from sqlalchemy.orm import Session, joinedload
-from app.data.database import SessionLocal
 from app.models import Supply, SupplyPurchase, SupplyConsumption, Supplier
+from sqlalchemy.orm import joinedload
+from app.data.database import get_db
 from datetime import datetime, date
 
 
 class SupplyProvider:
-    """Provider para operaciones CRUD de insumos, compras y consumos"""
 
-    def _get_session(self) -> Session:
-        """Get a new database session"""
-        return SessionLocal()
 
     # ===== SUPPLIES (Insumos) =====
 
     def get_all_supplies(self):
         """Get all unique supplies with their supplier info"""
-        db = self._get_session()
+        
+        db = get_db()
+        
         try:
             supplies = db.query(Supply).options(joinedload(Supply.supplier)).all()
             return [
@@ -34,7 +32,9 @@ class SupplyProvider:
 
     def get_supply_by_id(self, supply_id):
         """Get a supply by ID with all its purchases and consumptions"""
-        db = self._get_session()
+        
+        db = get_db()
+        
         try:
             supply = db.query(Supply).options(
                 joinedload(Supply.supplier),
@@ -48,51 +48,60 @@ class SupplyProvider:
                     'supply_name': supply.supply_name,
                     'supplier_id': supply.supplier_id,
                     'supplier_name': supply.supplier.supplier_name if supply.supplier else 'N/A',
-                    'purchases': sorted([
-                        {
-                            'id': p.id,
-                            'purchase_date': p.purchase_date,
-                            'quantity': p.quantity,
-                            'unit': p.unit,
-                            'unit_price': p.unit_price,
-                            'total_price': p.total_price,
-                            'supplier_id': p.supplier_id,
-                            'supplier_name': p.supplier.supplier_name if p.supplier else 'N/A',
-                            'notes': p.notes
-                        }
-                        for p in supply.purchases
-                    ], key=lambda x: x['purchase_date'], reverse=True),
-                    'consumptions': sorted([
-                        {
-                            'id': c.id,
-                            'start_date': c.start_date,
-                            'end_date': c.end_date,
-                            'quantity_consumed': c.quantity_consumed,
-                            'quantity_remaining': c.quantity_remaining,
-                            'unit': c.unit,
-                            'notes': c.notes
-                        }
-                        for c in supply.consumptions
-                    ], key=lambda x: x['end_date'], reverse=True)
+                    'purchases': sorted(
+                        [
+                            {
+                                'id': p.id,
+                                'purchase_date': p.purchase_date,
+                                'quantity': p.quantity,
+                                'unit': p.unit,
+                                'unit_price': p.unit_price,
+                                'total_price': p.total_price,
+                                'initial_stock': p.initial_stock,
+                                'supplier_id': p.supplier_id,
+                                'supplier_name': p.supplier.supplier_name if p.supplier else 'N/A',
+                                'notes': p.notes
+                            }
+                            for p in supply.purchases
+                        ], 
+                        key=lambda x: x['purchase_date'], reverse=True
+                    ),
+                    'consumptions': sorted(
+                        [
+                            {
+                                'id': c.id,
+                                'start_date': c.start_date,
+                                'end_date': c.end_date,
+                                'quantity_consumed': c.quantity_consumed,
+                                'quantity_remaining': c.quantity_remaining,
+                                'unit': c.unit,
+                                'notes': c.notes
+                            }
+                            for c in supply.consumptions
+                        ],
+                        key=lambda x: x['end_date'], reverse=True
+                    )
                 }
-            return None
+            return
         finally:
             db.close()
 
     def get_supply_by_name(self, supply_name):
-        """Get a supply by name"""
-        db = self._get_session()
+        
+        db = get_db()
+
         try:
             supply = db.query(Supply).filter(Supply.supply_name == supply_name).first()
             if supply:
                 return supply.id
-            return None
+            return
         finally:
             db.close()
 
     def create_supply(self, supply_name, supplier_id):
-        """Create a new supply (insumo único)"""
-        db = self._get_session()
+        
+        db = get_db()
+
         try:
             supply = Supply(
                 supply_name=supply_name,
@@ -101,16 +110,19 @@ class SupplyProvider:
             db.add(supply)
             db.commit()
             db.refresh(supply)
+
             return True, supply.id
         except Exception as e:
+
             db.rollback()
             return False, str(e)
+
         finally:
             db.close()
 
     def update_supply(self, supply_id, supply_name, supplier_id):
-        """Update a supply"""
-        db = self._get_session()
+
+        db = get_db()
         try:
             supply = db.query(Supply).filter(Supply.id == supply_id).first()
             if supply:
@@ -128,7 +140,8 @@ class SupplyProvider:
 
     def delete_supply(self, supply_id):
         """Delete a supply (and all its purchases and consumptions due to cascade)"""
-        db = self._get_session()
+        db = get_db()
+
         try:
             supply = db.query(Supply).filter(Supply.id == supply_id).first()
             if supply:
@@ -146,13 +159,17 @@ class SupplyProvider:
 
     def get_purchases_by_supply(self, supply_id):
         """Get all purchases for a specific supply"""
-        db = self._get_session()
+        
+        db = get_db()
+
         try:
             purchases = db.query(SupplyPurchase).options(
                 joinedload(SupplyPurchase.supplier)
             ).filter(
                 SupplyPurchase.supply_id == supply_id
-            ).order_by(SupplyPurchase.purchase_date.desc()).all()
+            ).order_by(
+                SupplyPurchase.purchase_date.desc()
+            ).all()
 
             return [
                 {
@@ -162,6 +179,7 @@ class SupplyProvider:
                     'unit': p.unit,
                     'unit_price': p.unit_price,
                     'total_price': p.total_price,
+                    'initial_stock': p.initial_stock,  # Stock antes de esta compra
                     'supplier_id': p.supplier_id,
                     'supplier_name': p.supplier.supplier_name if p.supplier else 'N/A',
                     'notes': p.notes
@@ -173,19 +191,26 @@ class SupplyProvider:
 
     def has_previous_purchases(self, supply_id):
         """Check if a supply has previous purchases"""
-        db = self._get_session()
+        db = get_db()
+        
         try:
             count = db.query(SupplyPurchase).filter(
                 SupplyPurchase.supply_id == supply_id
             ).count()
             return count > 0
+        
         finally:
             db.close()
 
     def add_purchase(self, supply_id, supplier_id, purchase_date, quantity, unit, unit_price, total_price, notes=None):
         """Add a new purchase for a supply"""
-        db = self._get_session()
+        
+        db = get_db()
+        
         try:
+            # Calculate the initial stock (remaining from the last purchase/consumption)
+            initial_stock = self._calculate_current_stock(supply_id, db)
+
             purchase = SupplyPurchase(
                 supply_id=supply_id,
                 supplier_id=supplier_id,
@@ -194,23 +219,30 @@ class SupplyProvider:
                 unit=unit,
                 unit_price=unit_price,
                 total_price=total_price,
+                initial_stock=initial_stock,  # Stock acumulado antes de esta compra
                 notes=notes
             )
+
             db.add(purchase)
             db.commit()
             db.refresh(purchase)
+
             return True, purchase.id
+
         except Exception as e:
             db.rollback()
             return False, str(e)
+
         finally:
             db.close()
 
     def update_purchase(self, purchase_id, supplier_id, purchase_date, quantity, unit, unit_price, total_price, notes=None):
-        """Update an existing purchase"""
-        db = self._get_session()
+
+        db = get_db()
+        
         try:
             purchase = db.query(SupplyPurchase).filter(SupplyPurchase.id == purchase_id).first()
+            
             if purchase:
                 purchase.supplier_id = supplier_id
                 purchase.purchase_date = purchase_date if isinstance(purchase_date, date) else datetime.strptime(purchase_date, "%Y-%m-%d").date()
@@ -221,7 +253,9 @@ class SupplyProvider:
                 purchase.notes = notes
                 purchase.updated_at = datetime.now()
                 db.commit()
+                
                 return True, "Compra actualizada"
+            
             return False, "Compra no encontrada"
         except Exception as e:
             db.rollback()
@@ -230,14 +264,18 @@ class SupplyProvider:
             db.close()
 
     def delete_purchase(self, purchase_id):
-        """Delete a purchase"""
-        db = self._get_session()
+        
+        db = get_db()
+
         try:
             purchase = db.query(SupplyPurchase).filter(SupplyPurchase.id == purchase_id).first()
+            
             if purchase:
                 db.delete(purchase)
                 db.commit()
+
                 return True, "Compra eliminada"
+            
             return False, "Compra no encontrada"
         except Exception as e:
             db.rollback()
@@ -249,7 +287,8 @@ class SupplyProvider:
 
     def get_consumptions_by_supply(self, supply_id):
         """Get all consumptions for a specific supply"""
-        db = self._get_session()
+        db = get_db()
+        
         try:
             consumptions = db.query(SupplyConsumption).filter(
                 SupplyConsumption.supply_id == supply_id
@@ -271,8 +310,10 @@ class SupplyProvider:
             db.close()
 
     def add_consumption(self, supply_id, start_date, end_date, quantity_consumed, quantity_remaining, unit, notes=None):
-        """Add a consumption record"""
-        db = self._get_session()
+        
+        """Add a consumption record and update the initial_stock of the next purchase"""
+        
+        db = get_db()
         try:
             consumption = SupplyConsumption(
                 supply_id=supply_id,
@@ -284,8 +325,23 @@ class SupplyProvider:
                 notes=notes
             )
             db.add(consumption)
+
+            # Update the initial stock of the immediately following purchase
+            # Find the purchase with a purchase date >= end date (the next purchase)
+            end_date_obj = end_date if isinstance(end_date, date) else datetime.strptime(end_date, "%Y-%m-%d").date()
+
+            next_purchase = db.query(SupplyPurchase).filter(
+                SupplyPurchase.supply_id == supply_id,
+                SupplyPurchase.purchase_date >= end_date_obj
+            ).order_by(SupplyPurchase.purchase_date.asc()).first()
+
+            if next_purchase:
+                # Update the initial stock of the next purchase with the quantity remaining
+                next_purchase.initial_stock = quantity_remaining
+
             db.commit()
             db.refresh(consumption)
+            
             return True, consumption.id
         except Exception as e:
             db.rollback()
@@ -295,23 +351,88 @@ class SupplyProvider:
 
     # ===== HELPERS =====
 
+    def _calculate_current_stock(self, supply_id, db=None):
+        """
+        Calculate the current stock of an item (cumulative stock).
+
+        Logic:
+        - If there are no previous purchases, return 0
+        - If there are purchases but no consumption, return the sum of all purchases
+        - If there is consumption, retrieve the last consumption and return its quantity_remaining
+
+        This value represents how much inventory remains BEFORE making a new purchase.
+        """
+
+        should_close = False
+
+        if db is None:
+            db = get_db()
+            should_close = True
+
+        try:
+
+            # Get the latest recorded consumption (the most recent)
+            last_consumption = db.query(SupplyConsumption).filter(
+                SupplyConsumption.supply_id == supply_id
+            ).order_by(SupplyConsumption.end_date.desc()).first()
+
+            if last_consumption:
+                # If there are recorded consumptions, the current stock is the quantity remaining from the last consumption
+                return last_consumption.quantity_remaining
+            else:
+                # If there are no transactions, check if there are purchases without recorded transactions.
+                
+                purchases = db.query(SupplyPurchase).filter(
+                    SupplyPurchase.supply_id == supply_id
+                ).order_by(SupplyPurchase.purchase_date.desc()).all()
+
+                if not purchases:
+                    # No pre-orders
+                    return 0.0
+
+                # If there are purchases but no usage, add up all purchases
+                # (edge ​​case: first purchase recorded but no usage yet)
+                total_stock = sum(p.quantity for p in purchases)
+                return total_stock
+
+        finally:
+            if should_close:
+                db.close()
+
+    def get_current_stock(self, supply_id):
+        """
+        This retrieves the current (cumulative) stock of an input.
+        This is the inventory available at this time.
+        """
+        return self._calculate_current_stock(supply_id)
+
     def get_suppliers_list(self):
         """Get list of active suppliers for dropdown"""
-        db = self._get_session()
+        
+        db = get_db()
+        
         try:
+        
             suppliers = db.query(Supplier).filter(Supplier.active == True).order_by(Supplier.supplier_name).all()
             return [(s.id, s.supplier_name) for s in suppliers]
+        
         finally:
             db.close()
 
     def search_supplies(self, term):
         """Search supplies by name"""
-        db = self._get_session()
+        
+        db = get_db()
+        
         try:
+        
             supplies = db.query(Supply).join(Supplier).filter(
-                (Supply.supply_name.ilike(f'%{term}%') |
-                 Supplier.supplier_name.ilike(f'%{term}%'))
+                (
+                    Supply.supply_name.ilike(f'%{term}%') |
+                    Supplier.supplier_name.ilike(f'%{term}%')
+                )
             ).all()
+
             return [
                 {
                     'id': s.id,
