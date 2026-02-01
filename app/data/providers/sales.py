@@ -1,7 +1,6 @@
-from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date
-from app.data.database import get_db
 from app.models import Sale, SaleDetail
+from app.data.database import get_db
 from datetime import datetime
 
 
@@ -98,7 +97,7 @@ class SaleProvider:
                         for d in details
                     ]
                 }
-            return None
+            return
         finally:
             db.close()
 

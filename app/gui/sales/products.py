@@ -67,10 +67,10 @@ class Products(ttk.Frame):
             widget.destroy()
         
         # Crear card para cada producto
-        for producto_id, nombre, precio in self.content.products_items:
-            self.product_card(producto_id, nombre, precio)
-    
-    def product_card(self, product_id, name, price):
+        for producto_id, icon, nombre, precio in self.content.products_items:
+            self.product_card(producto_id, icon, nombre, precio)
+
+    def product_card(self, product_id, icon, name, price):
 
         card = ttk.Frame(
             self.scrollable_frame,
@@ -79,8 +79,8 @@ class Products(ttk.Frame):
             borderwidth=1
         )
         card.pack(fill=BOTH, expand=YES, pady=8)
-    
-        emoji = self.get_emoji(name)
+
+        emoji = icon or "🍴"
 
         lbl_emoji = ttk.Label(
             card,
@@ -122,31 +122,6 @@ class Products(ttk.Frame):
         )
         btn_agregar.pack(side=RIGHT, padx=15, pady=15)
     
-    def get_emoji(self, name):
-        """Obtener emoji según el nombre del producto"""
-        lower_name = name.lower()
-        
-        if "tortilla" in lower_name:
-            return "🌮"
-        elif "tostada" in lower_name:
-            return "🍞"
-        elif "tlayuda" in lower_name:
-            return "🌯"
-        elif "sope" in lower_name:
-            return "🥙"
-        elif "tamal" in lower_name:
-            return "🥟"
-        elif "salsa" in lower_name:
-            return "🍅"
-        elif "queso" in lower_name or "quesadilla" in lower_name:
-            return "🧀"
-        elif "frijol" in lower_name:
-            return "🥜"
-        elif "gorditas" in lower_name:
-            return "🌕"
-        else:
-            return "🍴"
-
     # mouse events
 
     def _on_mousewheel(self, event):
