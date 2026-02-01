@@ -9,8 +9,6 @@ class ShoppingCar(ttk.Frame):
         super().__init__(parent, width=350)
         self.app = app
         self.content = content
-        self.selected_customer = None  # Cliente seleccionado
-        self.customers_list = []  # Lista de todos los clientes
 
         self.setup_ui()
     
@@ -132,37 +130,6 @@ class ShoppingCar(ttk.Frame):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill=X, padx=10, pady=10)
 
-        # Customer Search Section
-        customer_frame = ttk.Labelframe(btn_frame, text="Cliente", padding=10)
-        customer_frame.pack(fill=X, pady=(0, 10))
-
-        # Search box
-        search_frame = ttk.Frame(customer_frame)
-        search_frame.pack(fill=X, pady=(0, 5))
-
-        self.customer_search_var = ttk.StringVar()
-        self.customer_search_var.trace_add('write', self.on_search_change)
-
-        self.customer_search_entry = ttk.Entry(
-            search_frame,
-            textvariable=self.customer_search_var,
-            font=("Arial", 10)
-        )
-        self.customer_search_entry.pack(side=LEFT, fill=X, expand=True)
-
-        # Selected customer display
-        self.selected_customer_label = ttk.Label(
-            customer_frame,
-            text="Cliente: Mostrador (Por defecto)",
-            font=("Arial", 9),
-            bootstyle="secondary"
-        )
-        self.selected_customer_label.pack(fill=X)
-
-        # Dropdown with search results (initially hidden)
-        self.customer_dropdown_frame = ttk.Frame(customer_frame)
-        self.customer_listbox = None
-
         self.btn_charge = ttk.Button(
             btn_frame,
             text="💰 COBRAR",
@@ -210,12 +177,6 @@ class ShoppingCar(ttk.Frame):
         if not self.content.shopping_cart:
             self.lbl_total.config(text="$0.00")
             self.lbl_items.config(text="0 items")
-            # Reset customer selection when cart is empty
-            self.selected_customer = None
-            self.selected_customer_label.config(
-                text="Cliente: Mostrador (Por defecto)",
-                bootstyle="secondary"
-            )
             return
 
         # Remove the empty label
@@ -314,109 +275,7 @@ class ShoppingCar(ttk.Frame):
         self.canvas.unbind_all("<Button-4>")
         self.canvas.unbind_all("<Button-5>")
 
-    def load_customers(self):
-        """Cargar todos los clientes (excluyendo los ocultos)"""
-        self.customers_list = customer_provider.get_all()
-
-    def on_search_change(self, *args):
-        """Manejar cambios en el campo de búsqueda"""
-        search_text = self.customer_search_var.get().lower()
-
-        # Si está vacío, ocultar el dropdown
-        if not search_text:
-            self.hide_customer_dropdown()
-            return
-
-        # Cargar clientes si no están cargados
-        if not self.customers_list:
-            self.load_customers()
-
-        # Filtrar clientes
-        filtered_customers = [
-            c for c in self.customers_list
-            if search_text in c.customer_name.lower()
-        ]
-
-        # Mostrar resultados
-        self.show_customer_dropdown(filtered_customers)
-
-    def show_customer_dropdown(self, customers):
-        """Mostrar dropdown con resultados de búsqueda"""
-        # Limpiar dropdown anterior
-        self.hide_customer_dropdown()
-
-        if not customers:
-            return
-
-        # Mostrar frame del dropdown
-        self.customer_dropdown_frame.pack(fill=X, pady=(5, 0))
-
-        # Crear listbox con resultados
-        self.customer_listbox = ttk.Treeview(
-            self.customer_dropdown_frame,
-            columns=(),
-            show="tree",
-            height=min(5, len(customers))
-        )
-        self.customer_listbox.pack(fill=BOTH, expand=False)
-        # Configurar columna sin ancho fijo para que se ajuste al contenedor
-        self.customer_listbox.column("#0", width=0, stretch=True)
-
-        # Agregar clientes al listbox
-        for customer in customers:
-            # Guardar el ID en tags para recuperarlo después
-            self.customer_listbox.insert(
-                "",
-                "end",
-                text=customer.customer_name,
-                tags=(str(customer.id),)
-            )
-
-        # Bind para selección
-        self.customer_listbox.bind("<<TreeviewSelect>>", self.on_customer_select)
-
-    def hide_customer_dropdown(self):
-        """Ocultar dropdown de clientes"""
-        if self.customer_listbox:
-            self.customer_listbox.destroy()
-            self.customer_listbox = None
-        self.customer_dropdown_frame.pack_forget()
-
-    def on_customer_select(self, event):
-        """Manejar selección de cliente"""
-        if not self.customer_listbox:
-            return
-
-        selection = self.customer_listbox.selection()
-        if not selection:
-            return
-
-        # Obtener el cliente seleccionado
-        item = self.customer_listbox.item(selection[0])
-        customer_id = int(item['tags'][0])  # Obtener ID desde tags
-        customer_name = item['text']
-
-        # Buscar el cliente completo en la lista
-        for customer in self.customers_list:
-            if customer.id == customer_id:
-                self.selected_customer = customer
-                break
-
-        # Actualizar label
-        self.selected_customer_label.config(
-            text=f"Cliente: {customer_name}",
-            bootstyle="success"
-        )
-
-        # Limpiar búsqueda y ocultar dropdown
-        self.customer_search_var.set("")
-        self.hide_customer_dropdown()
-
-    def get_selected_customer_id(self):
-        """Obtener el ID del cliente seleccionado o el cliente Mostrador por defecto"""
-        if self.selected_customer:
-            return self.selected_customer.id
-        else:
-            # Obtener el cliente Mostrador genérico
-            mostrador = customer_provider.get_by_category('Mostrador')
-            return mostrador.id if mostrador else None
+    def get_mostrador_customer_id(self):
+        """Obtener el ID del cliente Mostrador"""
+        mostrador = customer_provider.get_by_category('Mostrador')
+        return mostrador.id if mostrador else None
