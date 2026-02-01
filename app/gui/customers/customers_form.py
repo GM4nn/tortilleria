@@ -1,14 +1,17 @@
 import os
 import shutil
-from datetime import datetime
 from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from app.constants import CUSTOMER_CATEGORIES, CUSTOMER_MOSTRADOR_NAME
 from app.data.providers.customers import customer_provider
 
 
 class CustomersForm(ttk.Frame):
+
+    IMAGE_DIR = os.path.join("app", "data", "customer_images")
+
     def __init__(self, parent, app, main_container):
         super().__init__(parent)
 
@@ -20,14 +23,12 @@ class CustomersForm(ttk.Frame):
 
         self.setup_ui()
 
-
     def setup_ui(self):
         self.right_frame = ttk.Frame(self.main_container)
         self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(10, 0))
 
         self.setup_form_section()
         self.setup_btn_actions()
-
 
     def setup_form_section(self):
 
@@ -84,7 +85,7 @@ class CustomersForm(ttk.Frame):
         self.category_combo = ttk.Combobox(
             self.form_frame,
             textvariable=self.category_var,
-            values=["Mostrador", "Comedor", "Tienda"],
+            values=list([customer_category for customer_category in CUSTOMER_CATEGORIES.keys() if customer_category not in CUSTOMER_MOSTRADOR_NAME]),
             width=28,
             state="readonly"
         )
@@ -125,7 +126,6 @@ class CustomersForm(ttk.Frame):
 
         self.current_image = None
 
-
     def setup_btn_actions(self):
 
         btn_container = ttk.Frame(self.form_frame)
@@ -163,7 +163,6 @@ class CustomersForm(ttk.Frame):
             width=20
         ).pack(fill=X, pady=5)
 
-
     def load_image(self):
 
         file_path = filedialog.askopenfilename(
@@ -177,17 +176,24 @@ class CustomersForm(ttk.Frame):
         if file_path:
 
             try:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                ext = os.path.splitext(file_path)[1]
-                new_filename = f"customer_{timestamp}{ext}"
+                # Eliminar la foto anterior si existe para no acumular archivos
+                old_photo = self.photo_var.get()
+                if old_photo:
+                    old_path = os.path.join(self.IMAGE_DIR, old_photo)
+                    if os.path.exists(old_path):
+                        try:
+                            os.remove(old_path)
+                        except OSError:
+                            pass
 
-                image_dir = os.path.join("app", "data", "customer_images")
-                os.makedirs(image_dir, exist_ok=True)
+                original_filename = os.path.basename(file_path)
 
-                dest_path = os.path.join(image_dir, new_filename)
+                os.makedirs(self.IMAGE_DIR, exist_ok=True)
+
+                dest_path = os.path.join(self.IMAGE_DIR, original_filename)
                 shutil.copy2(file_path, dest_path)
 
-                self.photo_var.set(dest_path)
+                self.photo_var.set(original_filename)
 
                 self.update_image_preview(dest_path)
 
@@ -220,7 +226,8 @@ class CustomersForm(ttk.Frame):
 
     def show_full_image(self, event=None):
 
-        image_path = self.photo_var.get()
+        filename = self.photo_var.get()
+        image_path = os.path.join(self.IMAGE_DIR, filename) if filename else ""
 
         if not image_path or not os.path.exists(image_path):
             messagebox.showinfo("Sin imagen", "No hay imagen para mostrar")
@@ -231,6 +238,7 @@ class CustomersForm(ttk.Frame):
             popup = ttk.Toplevel(self)
             popup.title("Vista de Imagen - Cliente")
             popup.geometry("800x600")
+            popup.resizable(False, False)
 
             popup.transient(self)
             popup.grab_set()
@@ -286,7 +294,6 @@ class CustomersForm(ttk.Frame):
         self.clear_form()
         self.name_entry.focus()
 
-
     def save_customer(self):
 
         name = self.name_var.get().strip()
@@ -331,7 +338,6 @@ class CustomersForm(ttk.Frame):
             else:
                 messagebox.showerror("Error", f"No se pudo actualizar el cliente: {result}")
 
-
     def delete_customer(self):
 
         if self.selected_customer_id is None:
@@ -356,7 +362,6 @@ class CustomersForm(ttk.Frame):
                 self.parent.table_section.load_customers()
         else:
             messagebox.showerror("Error", f"No se pudo eliminar el cliente: {result}")
-
 
     def clear_form(self):
 

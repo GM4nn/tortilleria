@@ -1,3 +1,4 @@
+import os
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.tableview import Tableview
@@ -55,9 +56,9 @@ class CustomersTable(ttk.Frame):
     def setup_table_section(self):
 
         columns = [
-            {"text": "ID", "stretch": False, "width": 60},
-            {"text": "Nombre", "stretch": True},
-            {"text": "Teléfono", "stretch": False, "width": 120},
+            {"text": "ID",        "stretch": False, "width": 60},
+            {"text": "Nombre",    "stretch": True},
+            {"text": "Teléfono",  "stretch": False, "width": 120},
             {"text": "Categoría", "stretch": False, "width": 120},
             {"text": "Dirección", "stretch": True}
         ]
@@ -135,10 +136,13 @@ class CustomersTable(ttk.Frame):
             form.phone_var.set(customer['phone'] or '')
             form.direction_var.set(customer['direction'] or '')
             form.category_var.set(customer['category'])
-            form.photo_var.set(customer['photo'] or '')
+            photo = customer['photo'] or ''
+            filename = os.path.basename(photo) if photo else ''
+            form.photo_var.set(filename)
 
-            if customer['photo']:
-                form.update_image_preview(customer['photo'])
+            if filename:
+                full_path = os.path.join(form.IMAGE_DIR, filename)
+                form.update_image_preview(full_path)
             else:
                 form.update_image_preview(None)
 
