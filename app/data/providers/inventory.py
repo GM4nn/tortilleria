@@ -1,4 +1,7 @@
+import csv
+
 from app.data.database import get_db
+from app.constants import CSV_PATH
 from app.models import Product
 
 
@@ -7,26 +10,23 @@ class InventoryProvider:
     def _add_default_products(self):
 
         db = get_db()
-        
+
         try:
             count = db.query(Product).count()
-            
-            if count == 0:
-                
-                productos_default = [
-                    Product(name="Tortilla de Maíz", price=18.00),
-                    Product(name="Tostadas", price=15.00),
-                    Product(name="Tlayudas", price=25.00),
-                    Product(name="Sopes", price=12.00),
-                    Product(name="Tamales", price=20.00),
-                    Product(name="Salsa Roja", price=30.00),
-                    Product(name="Salsa Verde", price=30.00),
-                    Product(name="Frijoles Refritos", price=25.00),
-                    Product(name="Quesadillas", price=35.00),
-                    Product(name="Gorditas", price=22.00),
-                ]
 
-                db.add_all(productos_default)
+            if count == 0:
+                with open(CSV_PATH, newline='', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    productos = [
+                        Product(
+                            icon=row['icon'],
+                            name=row['name'],
+                            price=float(row['price'])
+                        )
+                        for row in reader
+                    ]
+
+                db.add_all(productos)
                 db.commit()
 
         finally:
@@ -39,6 +39,7 @@ class InventoryProvider:
         try:
             products = db.query(
                 Product.id,
+                Product.icon,
                 Product.name,
                 Product.price
             ).filter(Product.active == True).all()
@@ -63,12 +64,12 @@ class InventoryProvider:
         finally:
             db.close()
 
-    def add(self, name, price):
+    def add(self, icon, name, price):
 
         db = get_db()
-        
+
         try:
-            product = Product(name=name, price=price)
+            product = Product(icon=icon, name=name, price=price)
             
             db.add(product)
             db.commit()
@@ -85,17 +86,15 @@ class InventoryProvider:
             db.close()
 
 
-    def update(self, product_id, name, price):
-        
+    def update(self, product_id, icon, name, price):
+
         db = get_db()
 
         try:
-            product = db.query(Product.id,
-                Product.name,
-                Product.price
-            ).filter(Product.id == product_id).first()
+            product = db.query(Product).filter(Product.id == product_id).first()
 
             if product:
+                product.icon = icon
                 product.name = name
                 product.price = price
                 db.commit()
