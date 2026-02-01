@@ -162,7 +162,7 @@ class CustomersTable(ttk.Frame):
                 customer['id'],
                 customer['name'],
                 customer['phone'] or 'N/A',
-                customer['category'] or 'General',
+                customer['category'],
                 customer['direction'] or 'N/A'
             ])
 
