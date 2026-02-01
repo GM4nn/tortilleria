@@ -9,7 +9,7 @@ from typing import Dict, Any
 
 
 from anthropic import Anthropic
-from app.constants import AI_ASSISTANT_MAX_TOKENS, AI_ASSISTANT_SYSTEM_PROMPT, AI_ASSISTANT_TEMPERATURE
+from app.constants import AI_ASSISTANT_MAX_TOKENS, AI_ASSISTANT_SYSTEM_PROMPT, AI_ASSISTANT_TEMPERATURE, STATUS_API_AI
 from app.constants import AI_ASSISTANT_MODEL
 from app.services.db_tool import DatabaseTool
 
@@ -28,7 +28,7 @@ class AIAssistantMCP:
         """Get Anthropic client with current API key"""
         from app import api_key
         if not api_key.API_KEY:
-            raise Exception("Por favor, configura primero el asistente usando el botón ⚙️")
+            return
         return Anthropic(api_key=api_key.API_KEY)
 
     def ask(self, question: str, max_iterations: int = 5) -> dict:
@@ -68,12 +68,19 @@ class AIAssistantMCP:
 
             # System prompt with schema
 
+            client = self._get_client()
+            if not client:
+                return {
+                    "success": False,
+                    "response": "Configura tu API Key primero (click en ⚙️)",
+                    "sql_queries": []
+                }
+
             for iteration in range(max_iterations):
-                
+
                 print(f"[DEBUG] Iteración {iteration + 1}/{max_iterations}")
 
                 # Call Claude with tools
-                client = self._get_client()
                 response = client.messages.create(
                     model=self.model,
                     max_tokens=AI_ASSISTANT_MAX_TOKENS,
@@ -179,36 +186,28 @@ class AIAssistantMCP:
 
     def check_status(self) -> Dict[str, Any]:
         """Check if Claude API is properly configured"""
-
+     
+        # Try a simple API call to verify the key works
         try:
+            client = self._get_client()
 
-            # Try a simple API call to verify the key works
-            try:
-                client = self._get_client()
-                client.messages.create(
-                    model=self.model,
-                    max_tokens=10,
-                    messages=[{"role": "user", "content": "test"}]
-                )
+            if not client:
+                return STATUS_API_AI['CONFIG_PENDING_KEY']
 
-                return {
-                    "status": "ready",
-                    "message": f"Claude Sonnet 4.5 está listo",
-                    "model": self.model
-                }
-            except Exception as api_error:
-                error_str = str(api_error)
+            client.messages.create(
+                model=self.model,
+                max_tokens=10,
+                messages=[{"role": "user", "content": "test"}]
+            )
 
-                return {
-                    "status": "error",
-                    "message": f"Error conectando con Claude: {error_str}"
-                }
+            return STATUS_API_AI['READY']
 
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Error verificando Claude: {str(e)}"
-            }
+        except Exception as api_error:
+            error_str = str(api_error)
+
+            print(f"error conectado a claude: {error_str}")
+
+            return STATUS_API_AI['INVALID_KEY']
 
 
 # Singleton instance

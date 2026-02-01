@@ -1,10 +1,6 @@
-"""
-AI Assistant Module - Chat Display Area
-Contains title, status indicator and message display
-"""
-import tkinter as tk
-from tkinter import ttk
 from datetime import datetime
+from tkinter import ttk
+import tkinter as tk
 
 
 class ChatDisplay(ttk.Frame):
@@ -18,6 +14,14 @@ class ChatDisplay(ttk.Frame):
 
     def create_widgets(self):
         """Create the display widgets"""
+
+        # header
+        self.header()
+
+        # chat container
+        self.chat_container()
+
+    def header(self):
 
         # Header
         header_frame = ttk.Frame(self)
@@ -61,14 +65,7 @@ class ChatDisplay(ttk.Frame):
         )
         subtitle.pack(side=tk.LEFT)
 
-        # Mode indicator
-        self.mode_label = ttk.Label(
-            subtitle_frame,
-            text="[Modo: SQL Directo ✓]",
-            font=("Segoe UI", 9, "bold"),
-            foreground="#28a745"
-        )
-        self.mode_label.pack(side=tk.RIGHT, padx=(10, 0))
+    def chat_container(self):
 
         # Chat area with canvas and scrollbar
         chat_frame = ttk.Frame(self)
@@ -78,7 +75,9 @@ class ChatDisplay(ttk.Frame):
         self.canvas = tk.Canvas(
             chat_frame,
             bg="#f8f9fa",
-            highlightthickness=0
+            highlightthickness=1,
+            highlightbackground="#495057",
+            highlightcolor="#495057"
         )
         self.scrollbar = ttk.Scrollbar(chat_frame, orient=tk.VERTICAL, command=self.canvas.yview)
         self.scrollable_frame = tk.Frame(self.canvas, bg="#f8f9fa")
@@ -100,148 +99,57 @@ class ChatDisplay(ttk.Frame):
         # Enable mouse wheel scrolling
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
-    def _on_canvas_configure(self, event):
-        """Update scrollable frame width when canvas is resized"""
-        canvas_width = event.width
-        self.canvas.itemconfig("frame", width=canvas_width)
-
-    def _on_mousewheel(self, event):
-        """Handle mouse wheel scrolling"""
-        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-    def _scroll_to_bottom(self):
-        """Scroll to the bottom of the chat"""
-        self.canvas.update_idletasks()
-        self.canvas.yview_moveto(1.0)
-
-    def update_status(self, status: dict):
+    def update_status_check_api_ai(self, status: dict):
         """Update the status indicator based on API status"""
 
-        status_type = status.get("status", "error")
+        color_status, msg_status = status
 
-        if status_type == "ready":
-            self.status_indicator.config(foreground="#28a745")  # Green
-            self.status_label.config(text="Listo")
+        self.status_indicator.config(foreground=color_status)
+        self.status_label.config(text=msg_status)
 
-        elif status_type == "invalid_key":
-            self.status_indicator.config(foreground="#dc3545")  # Red
-            self.status_label.config(text="Error")
-
-        else:
-            self.status_indicator.config(foreground="#6c757d")  # Gray
-            self.status_label.config(text="Error")
-
-    def add_message(self, sender: str, message: str, tag: str):
+    def add_message(self, sender: dict, message: str):
         """Add a message to the chat display with bubble styling"""
-        
-        timestamp = datetime.now().strftime("%H:%M")
 
+        timestamp = datetime.now().strftime("%H:%M")
         # Container for message alignment
         msg_container = tk.Frame(self.scrollable_frame, bg="#f8f9fa")
         msg_container.pack(fill=tk.X, padx=10, pady=5)
 
-        # Message bubble frame
-        if tag == "user":
+        # Bubble frame
+        bubble_frame = tk.Frame(
+            msg_container,
+            bg=sender["bg"],
+            relief=tk.RAISED,
+            bd=sender["bd"],
+            highlightbackground=sender["highlightbackground"],
+            highlightthickness=sender["highlightthickness"]
+        )
+        bubble_frame.pack(
+            side=tk.RIGHT if sender["side"] == "right" else tk.LEFT,
+            anchor=sender["anchor"],
+            padx=sender["padx"]
+        )
 
-            # User messages on the right with blue background
-            bubble_frame = tk.Frame(
-                msg_container,
-                bg="#0066cc",
-                relief=tk.RAISED,
-                bd=1,
-                highlightbackground="#0052a3",
-                highlightthickness=1
-            )
-            bubble_frame.pack(side=tk.RIGHT, anchor="e", padx=(100, 5))
+        header_label = tk.Label(
+            bubble_frame,
+            text=f"{sender['header_icon']} {sender['sender']}  •  {timestamp}",
+            font=("Segoe UI", 9, "bold"),
+            bg=sender["bg"],
+            fg=sender["header_fg"]
+        )
+        header_label.pack(anchor="w", padx=15, pady=(10, 5))
 
-            # Timestamp
-            time_label = tk.Label(
-                bubble_frame,
-                text=timestamp,
-                font=("Segoe UI", 8),
-                bg="#0066cc",
-                fg="#e6f2ff"
-            )
-            time_label.pack(anchor="e", padx=15, pady=(10, 2))
-
-            # Message text
-            msg_label = tk.Label(
-                bubble_frame,
-                text=message,
-                font=("Segoe UI", 11),
-                bg="#0066cc",
-                fg="white",
-                wraplength=400,
-                justify=tk.LEFT
-            )
-            msg_label.pack(anchor="w", padx=15, pady=(0, 10))
-
-        elif tag == "assistant":
-
-            # Assistant messages on the left with light gray background
-            bubble_frame = tk.Frame(
-                msg_container,
-                bg="white",
-                relief=tk.RAISED,
-                bd=1,
-                highlightbackground="#dee2e6",
-                highlightthickness=1
-            )
-            bubble_frame.pack(side=tk.LEFT, anchor="w", padx=(5, 100))
-
-            # Sender + Timestamp
-            header_label = tk.Label(
-                bubble_frame,
-                text=f"🤖 {sender}  •  {timestamp}",
-                font=("Segoe UI", 9, "bold"),
-                bg="white",
-                fg="#28a745"
-            )
-            header_label.pack(anchor="w", padx=15, pady=(10, 5))
-
-            # Message text
-            msg_label = tk.Label(
-                bubble_frame,
-                text=message,
-                font=("Segoe UI", 11),
-                bg="white",
-                fg="#212529",
-                wraplength=400,
-                justify=tk.LEFT
-            )
-            msg_label.pack(anchor="w", padx=15, pady=(0, 10))
-
-        elif tag == "error":
-            # Error messages on the left with red background
-            bubble_frame = tk.Frame(
-                msg_container,
-                bg="#f8d7da",
-                relief=tk.RAISED,
-                bd=1,
-                highlightbackground="#dc3545",
-                highlightthickness=1
-            )
-            bubble_frame.pack(side=tk.LEFT, anchor="w", padx=(5, 100))
-
-            header_label = tk.Label(
-                bubble_frame,
-                text=f"❌ {sender}  •  {timestamp}",
-                font=("Segoe UI", 9, "bold"),
-                bg="#f8d7da",
-                fg="#dc3545"
-            )
-            header_label.pack(anchor="w", padx=15, pady=(10, 5))
-
-            msg_label = tk.Label(
-                bubble_frame,
-                text=message,
-                font=("Segoe UI", 11),
-                bg="#f8d7da",
-                fg="#721c24",
-                wraplength=400,
-                justify=tk.LEFT
-            )
-            msg_label.pack(anchor="w", padx=15, pady=(0, 10))
+        # Message text
+        msg_label = tk.Label(
+            bubble_frame,
+            text=message,
+            font=("Segoe UI", 11),
+            bg=sender["bg"],
+            fg=sender["fg"],
+            wraplength=400,
+            justify=tk.LEFT
+        )
+        msg_label.pack(anchor="w", padx=15, pady=(0, 10))
 
         self._scroll_to_bottom()
 
@@ -262,33 +170,16 @@ class ChatDisplay(ttk.Frame):
 
         self._scroll_to_bottom()
 
-    def add_sql_debug_button(self, sql_queries: list):
+    def _on_canvas_configure(self, event):
+        """Update scrollable frame width when canvas is resized"""
+        canvas_width = event.width
+        self.canvas.itemconfig("frame", width=canvas_width)
 
-        msg_container = tk.Frame(self.scrollable_frame, bg="#f8f9fa")
-        msg_container.pack(fill=tk.X, padx=10, pady=2)
+    def _on_mousewheel(self, event):
+        """Handle mouse wheel scrolling"""
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        def show_sql():
-            sql_text = "\n\n".join([f"Query {i+1}:\n{query}" for i, query in enumerate(sql_queries)])
-            self.add_system_message(f"📝 SQL ejecutada:\n{sql_text}")
-
-        sql_button = tk.Button(
-            msg_container,
-            text=f"[Ver SQL ejecutada ({len(sql_queries)} query{'s' if len(sql_queries) > 1 else ''})]",
-            font=("Segoe UI", 9),
-            fg="#0066cc",
-            bg="#f8f9fa",
-            relief=tk.FLAT,
-            cursor="hand2",
-            command=show_sql,
-            bd=0,
-            activeforeground="#0052a3",
-            activebackground="#f8f9fa"
-        )
-        sql_button.pack(side=tk.LEFT, padx=(10, 0))
-
-        self._scroll_to_bottom()
-
-    def clear(self):
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
-        self.add_system_message("Chat limpiado. ¡Haz una nueva pregunta!")
+    def _scroll_to_bottom(self):
+        """Scroll to the bottom of the chat"""
+        self.canvas.update_idletasks()
+        self.canvas.yview_moveto(1.0)
