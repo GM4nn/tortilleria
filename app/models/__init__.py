@@ -4,5 +4,7 @@ from .sales import Sale
 from .sales_detail import SaleDetail
 from .suppliers import Supplier
 from .supplies import Supply, SupplyPurchase, SupplyConsumption
+from .orders import Order, OrderDetail
+from .ia import IAConfig
 
-__all__ = ['Product', 'Customer', 'Sale', 'SaleDetail', 'Supplier', 'Supply', 'SupplyPurchase', 'SupplyConsumption']
+__all__ = ['Product', 'Customer', 'Sale', 'SaleDetail', 'Supplier', 'Supply', 'SupplyPurchase', 'SupplyConsumption', 'Order', 'OrderDetail', 'IAConfig']

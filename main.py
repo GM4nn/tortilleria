@@ -1,5 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+import tkinter as tk
 from app.gui.navigation import Navigation
 from app.data.providers.inventory import inventory_provider
 from app.data.providers.customers import customer_provider
@@ -11,11 +12,11 @@ class TortilleriaApp:
         self.root.title("Tortillería Tierra Del Campo")
         self.root.geometry("1200x700")
         self.root.iconphoto(True, ttk.PhotoImage(file="tortilleria_logo.png"))
-        
+
         # Main Container
         main_container = ttk.Frame(root)
         main_container.pack(fill=BOTH, expand=YES)
-        
+
         # Left Navigation Buttons
         self.navigation = Navigation(main_container, self)
         self.navigation.pack(side=LEFT, fill=Y)
