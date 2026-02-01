@@ -1,6 +1,7 @@
 from tkinter import messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from app.constants import AVAILABLE_ICONS
 from app.data.providers.inventory import inventory_provider
 
 
@@ -13,6 +14,8 @@ class FormInventory(ttk.Frame):
         self.provider = inventory_provider
         self.main_container = main_container
         self.selected_product_id = None
+        self.selected_icon = None
+        self.icon_buttons = {}
 
         self.setup_ui()
 
@@ -29,7 +32,7 @@ class FormInventory(ttk.Frame):
 
         ttk.Label(
             self.right_frame,
-            text="Gestión de Producto",
+            text="Gestion de Producto",
             font=("Arial", 14, "bold")
         ).pack(pady=(0, 20))
 
@@ -66,9 +69,59 @@ class FormInventory(ttk.Frame):
         )
         self.price_entry.pack(fill=X, pady=(0, 10))
 
+        # Selector de icono
+        ttk.Label(self.form_frame, text="Icono:").pack(anchor=W, pady=(10, 2))
+
+        self.icon_preview = ttk.Label(
+            self.form_frame,
+            text="🍴",
+            font=("Segoe UI Emoji", 28),
+            bootstyle="inverse-light",
+            width=4,
+            anchor="center"
+        )
+        self.icon_preview.pack(anchor=W, pady=(0, 5))
+
+        icons_frame = ttk.Labelframe(self.form_frame, text="Seleccionar icono", padding=5)
+        icons_frame.pack(fill=X, pady=(0, 10))
+
+        grid_frame = ttk.Frame(icons_frame)
+        grid_frame.pack(fill=X)
+
+        cols = 5
+        for i, icon in enumerate(AVAILABLE_ICONS):
+            row = i // cols
+            col = i % cols
+            btn = ttk.Button(
+                grid_frame,
+                text=icon,
+                width=3,
+                bootstyle="outline",
+                command=lambda ic=icon: self.select_icon(ic)
+            )
+            btn.grid(row=row, column=col, padx=2, pady=2, sticky="ew")
+            self.icon_buttons[icon] = btn
+
+        for c in range(cols):
+            grid_frame.columnconfigure(c, weight=1)
+
+
+    def select_icon(self, icon):
+        """Seleccionar un icono del grid"""
+        # Reset todos los botones
+        for btn in self.icon_buttons.values():
+            btn.configure(bootstyle="outline")
+
+        # Resaltar el seleccionado
+        if icon in self.icon_buttons:
+            self.icon_buttons[icon].configure(bootstyle="primary")
+
+        self.selected_icon = icon
+        self.icon_preview.config(text=icon)
+
 
     def setup_btn_actions(self):
-        
+
         btn_container = ttk.Frame(self.form_frame)
         btn_container.pack(fill=X, pady=(20, 0))
 
@@ -114,6 +167,7 @@ class FormInventory(ttk.Frame):
 
         name = self.name_var.get().strip()
         price_str = self.price_var.get().strip()
+        icon = self.selected_icon or "🍴"
 
         if not name:
             messagebox.showerror("Error", "El nombre del producto es obligatorio")
@@ -130,15 +184,15 @@ class FormInventory(ttk.Frame):
             if price < 0:
                 raise ValueError("El precio no puede ser negativo")
         except ValueError:
-            messagebox.showerror("Error", "El precio debe ser un número válido")
+            messagebox.showerror("Error", "El precio debe ser un numero valido")
             self.price_entry.focus()
             return
 
         if self.selected_product_id is None:
-            success, result = self.provider.add(name, price)
+            success, result = self.provider.add(icon, name, price)
 
             if success:
-                messagebox.showinfo("Éxito", "Producto creado exitosamente")
+                messagebox.showinfo("Exito", "Producto creado exitosamente")
                 self.clear_form()
 
                 if hasattr(self.parent, 'products_section'):
@@ -147,9 +201,9 @@ class FormInventory(ttk.Frame):
                 messagebox.showerror("Error", f"No se pudo crear el producto: {result}")
         else:
 
-            success, result = self.provider.update(self.selected_product_id, name, price)
+            success, result = self.provider.update(self.selected_product_id, icon, name, price)
             if success:
-                messagebox.showinfo("Éxito", "Producto actualizado exitosamente")
+                messagebox.showinfo("Exito", "Producto actualizado exitosamente")
                 self.clear_form()
 
                 if hasattr(self.parent, 'products_section'):
@@ -165,8 +219,8 @@ class FormInventory(ttk.Frame):
             return
 
         confirm = messagebox.askyesno(
-            "Confirmar eliminación",
-            f"¿Está seguro que desea eliminar el producto '{self.name_var.get()}'?"
+            "Confirmar eliminacion",
+            f"Esta seguro que desea eliminar el producto '{self.name_var.get()}'?"
         )
 
         if not confirm:
@@ -175,7 +229,7 @@ class FormInventory(ttk.Frame):
         success, result = self.provider.delete(self.selected_product_id)
 
         if success:
-            messagebox.showinfo("Éxito", "Producto eliminado exitosamente")
+            messagebox.showinfo("Exito", "Producto eliminado exitosamente")
             self.clear_form()
 
             if hasattr(self.parent, 'products_section'):
@@ -187,9 +241,14 @@ class FormInventory(ttk.Frame):
     def clear_form(self):
 
         self.selected_product_id = None
+        self.selected_icon = None
         self.id_label.config(text="Nuevo")
+        self.icon_preview.config(text="🍴")
         self.name_var.set("")
         self.price_var.set("")
+
+        for btn in self.icon_buttons.values():
+            btn.configure(bootstyle="outline")
 
         if hasattr(self.parent, 'products_section'):
             self.parent.products_section.clear_selection()

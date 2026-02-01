@@ -1,0 +1,15 @@
+id,icon,name,price,active
+1,🌮,Kilo de tortillas,25.50,true
+2,🌮,Kilo de tortillas Con Papel,26.00,true
+3,🥟,Kilo de masa,24.00,true
+4,📄,Papel chico,0.50,true
+5,📄,Papel grande,1.00,true
+6,🛍,Bolsa bio,2.00,true
+7,📐,Bolsa de totopos,25.00,true
+8,🍚,Arroz rojo,27.00,true
+9,🍚,Arroz blanco,27.00,true
+10,🥜,Frijoles,27.00,true
+11,🍲,Guisado,30.00,true
+12,🌶,Salsa,25.00,true
+13,🌶,Salsa macha,25.00,true
+14,🌮,Tortilla fria,16.00,true

@@ -1,3 +1,72 @@
+import os as _os
+
+# DB NAME
+DB_NAME = "tortilleria"
+
+# DEFAULT PRODUCTS
+CSV_PATH = _os.path.join(_os.path.dirname(__file__), 'data', 'default', 'products.csv')
+
+# Icons available for the product selector (Unicode ≤ 11.0 para Tkinter)
+AVAILABLE_ICONS = [
+    "🌮", "🥟", "📄", "🛍", "📐", "🍚", "🥜", "🍲", "🌶",
+    "🍞", "🌯", "🥙", "🧀", "🌕", "🍴", "🥗", "🍳", "🥛",
+    "🍯", "🌽", "🍋", "🥚", "🍪", "☕", "🥤", "🧂", "📦",
+]
+
+# STATUS API AI
+STATUS_API_AI = {
+    "READY": ("#28a745", "Listo"), # Green
+    "INVALID_KEY": ("#dc3545", "Error"), # Red
+    "CONFIG_PENDING_KEY": ("#6c757d", "Configura la clave") # Gray
+}
+
+# SENDERS IN AI ASISTANT
+YOU_SENDER = {
+    "sender": "Tú",
+    "tag": "user",
+    "bg": "#5a6268",
+    "bd": 1,
+    "highlightbackground": "#495057",
+    "highlightthickness": 1,
+    "fg": "white",
+    "header_fg": "#d1d1d1",
+    "header_icon": "👤",
+    "timestamp_fg": "#d1d1d1",
+    "side": "right",
+    "anchor": "e",
+    "padx": (100, 5),
+}
+ASISTANT_SENDER = {
+    "sender": "Asistente",
+    "tag": "assistant",
+    "bg": "#6c757d",
+    "bd": 1,
+    "highlightbackground": "#495057",
+    "highlightthickness": 1,
+    "fg": "white",
+    "header_fg": "#a8e6a0",
+    "header_icon": "🤖",
+    "timestamp_fg": "#d1d1d1",
+    "side": "left",
+    "anchor": "w",
+    "padx": (5, 100),
+}
+ERROR_SENDER = {
+    "sender": "Error",
+    "tag": "error",
+    "bg": "#f8d7da",
+    "bd": 1,
+    "highlightbackground": "#dc3545",
+    "highlightthickness": 1,
+    "fg": "#721c24",
+    "header_fg": "#dc3545",
+    "header_icon": "❌",
+    "timestamp_fg": "#999999",
+    "side": "left",
+    "anchor": "w",
+    "padx": (5, 100),
+}
+
 # CUSTOMERS
 
 CUSTOMER_MOSTRADOR_NAME = "Cliente Mostrador"
@@ -22,7 +91,7 @@ AI_ASSISTANT_MAX_TOKENS = 2000
 
 QUICK_QUESTIONS = [
     "¿Cuántos ingresos generé este mes?",
-    "¿Cuánto dinero gasté en insumos?",
+    "¿Cuánto dinero gasté en insumos?", 
     "¿A qué proveedor le debería comprar más?",
     "¿Cuáles son los productos más vendidos?"   
 ]
@@ -61,6 +130,18 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     ✓ SÍ tiene columna de FECHA: purchase_date
     → Para obtener proveedor: JOIN con suppliers usando supplier_id
 
+    TABLE: orders
+    ✓ Tiene columnas: id, date, total, customer_id, status, notes
+    ✓ SÍ tiene columna de FECHA: date
+    ✓ status puede ser: 'pendiente', 'completado', 'cancelado'
+    → Para obtener cliente: JOIN con customers usando customer_id
+
+    TABLE: order_details
+    ✓ Tiene columnas: id, order_id, product_id, quantity, unit_price, subtotal
+    ✗ NO tiene columna de fecha
+    → Para obtener fecha: JOIN con orders usando order_id
+    → Para obtener producto: JOIN con products usando product_id
+
     ╔══════════════════════════════════════════════════════════════╗
     ║ RELACIONES (CÓMO HACER JOINs)                                ║
     ╚══════════════════════════════════════════════════════════════╝
@@ -76,6 +157,18 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     3. supplies → suppliers:
     FROM supplies s JOIN suppliers sup ON s.supplier_id = sup.id
     Úsalo cuando: Necesites información del proveedor
+
+    4. orders → customers:
+    FROM orders o JOIN customers c ON o.customer_id = c.id
+    Úsalo cuando: Necesites nombre del cliente de un pedido
+
+    5. order_details → orders:
+    FROM order_details od JOIN orders o ON od.order_id = o.id
+    Úsalo cuando: Necesites la fecha o status de un pedido
+
+    6. order_details → products:
+    FROM order_details od JOIN products p ON od.product_id = p.id
+    Úsalo cuando: Necesites nombre o precio del producto en un pedido
 
     ╔══════════════════════════════════════════════════════════════╗
     ║ SINTAXIS SQLite PARA FECHAS                                  ║
@@ -136,6 +229,20 @@ AI_ASSISTANT_SYSTEM_PROMPT = f"""
         GROUP BY sup.id
         ORDER BY promedio ASC
         LIMIT 1
+
+    Ejemplo 5 - Tabla CON fecha (orders tiene date):
+    Pregunta: "¿Cuántos pedidos pendientes tengo?"
+    SQL: SELECT COUNT(*) FROM orders WHERE status = 'pendiente'
+
+    Ejemplo 6 - Tabla SIN fecha (order_details NO tiene fecha, pero orders SÍ):
+    Pregunta: "¿Qué productos se pidieron este mes?"
+    SQL: SELECT p.name, SUM(od.quantity) as total
+        FROM order_details od
+        JOIN orders o ON od.order_id = o.id
+        JOIN products p ON od.product_id = p.id
+        WHERE strftime('%Y-%m', o.date) = strftime('%Y-%m', 'now')
+        GROUP BY p.id
+        ORDER BY total DESC
 
     PROCESO OBLIGATORIO PARA GENERAR SQL:
     1. Lee la pregunta del usuario

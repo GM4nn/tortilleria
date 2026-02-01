@@ -3,7 +3,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session
 
-DATABASE_URL = "sqlite:///tortilleria.db"
+from app.constants import DB_NAME
+
+DATABASE_URL = F"sqlite:///{DB_NAME}.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker[Session](autocommit=False, autoflush=False, bind=engine)

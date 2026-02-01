@@ -14,7 +14,7 @@ class ProductsInventory(ttk.Frame):
 
         self.setup_ui()
         self.load_products()
-    
+
 
     def setup_ui(self):
 
@@ -56,6 +56,7 @@ class ProductsInventory(ttk.Frame):
 
         columns = [
             {"text": "ID", "stretch": False, "width": 60},
+            {"text": "Icono", "stretch": False, "width": 70},
             {"text": "Nombre del Producto", "stretch": True},
             {"text": "Precio", "stretch": False, "width": 100},
             {"text": "Estado", "stretch": False, "width": 100}
@@ -121,13 +122,15 @@ class ProductsInventory(ttk.Frame):
             return
 
         product_id = values[0]
-        product_name = values[1]
-        product_price = values[2].replace('$', '')
+        product_icon = values[1]
+        product_name = values[2]
+        product_price = values[3].replace('$', '')
 
         if hasattr(self.parent, 'form_section'):
             form = self.parent.form_section
             form.selected_product_id = product_id
             form.id_label.config(text=str(product_id))
+            form.select_icon(product_icon)
             form.name_var.set(product_name)
             form.price_var.set(product_price)
 
@@ -147,6 +150,7 @@ class ProductsInventory(ttk.Frame):
             estado = "Activo" if product.get('active', 1) == 1 else "Inactivo"
             rows.append([
                 product['id'],
+                product['icon'],
                 product['name'],
                 f"${product['price']:.2f}",
                 estado
@@ -163,9 +167,10 @@ class ProductsInventory(ttk.Frame):
         products = self.provider.get_all()
         self.all_products = []
 
-        for product_id, name, price in products:
+        for product_id, icon, name, price in products:
             self.all_products.append({
                 'id': product_id,
+                'icon': icon or '🍴',
                 'name': name,
                 'price': price,
                 'active': 1
