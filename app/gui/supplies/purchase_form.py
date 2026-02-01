@@ -19,6 +19,8 @@ class PurchaseForm(ttk.Frame):
         self.suggested_supplier_id = None  # Proveedor sugerido del insumo
         self.is_first_purchase = True
         self.suppliers_dict = {}  # Diccionario para mapear nombres a IDs
+        self.edit_mode = False  # Modo edición
+        self.purchase_id = None  # ID de la compra a editar
 
         self.setup_ui()
 
@@ -28,11 +30,12 @@ class PurchaseForm(ttk.Frame):
         header_frame = ttk.Frame(self)
         header_frame.pack(fill=X, pady=(0, 20), padx=20)
 
-        ttk.Label(
+        self.title_label = ttk.Label(
             header_frame,
             text="Registrar Compra de Insumo",
             font=("Arial", 16, "bold")
-        ).pack(side=LEFT)
+        )
+        self.title_label.pack(side=LEFT)
 
         ttk.Button(
             header_frame,
@@ -165,15 +168,19 @@ class PurchaseForm(ttk.Frame):
         # Frame para consumo (se mostrará si no es la primera compra)
         self.consumption_frame = ttk.Frame(form_container)
 
-        # Separador
-        ttk.Separator(self.consumption_frame, orient=HORIZONTAL).pack(fill=X, pady=10)
+        ttk.Label(
+            self.consumption_frame,
+            text="Registrar Consumo del Período",
+            font=("Arial", 12, "bold"),
+            bootstyle="warning"
+        ).pack(anchor=W, pady=(5, 5))
 
         ttk.Label(
             self.consumption_frame,
-            text="¿Cuánto consumiste desde la última compra?",
-            font=("Arial", 12, "bold"),
-            bootstyle="warning"
-        ).pack(anchor=W, pady=(5, 10))
+            text="¿Cuánto gastaste desde la última compra?",
+            font=("Arial", 9, "italic"),
+            bootstyle="secondary"
+        ).pack(anchor=W, pady=(0, 10))
 
         # Información de última compra
         ttk.Label(self.consumption_frame, text="Última Compra:").pack(anchor=W, pady=(5, 2))
@@ -197,25 +204,94 @@ class PurchaseForm(ttk.Frame):
         )
         self.last_purchase_quantity_label.pack(side=LEFT, padx=(10, 0))
 
+        # Mostrar stock acumulado antes de la última compra
+        self.previous_stock_title_label = ttk.Label(
+            self.consumption_frame,
+            text="",  # Se llenará dinámicamente
+            font=("Arial", 10)
+        )
+        self.previous_stock_title_label.pack(anchor=W, pady=(5, 2))
+
+        self.previous_stock_label = ttk.Label(
+            self.consumption_frame,
+            text="",
+            font=("Arial", 10, "bold"),
+            bootstyle="secondary"
+        )
+        self.previous_stock_label.pack(anchor=W, pady=(0, 5))
+
+        # Resumen visual del total disponible
+        self.total_available_frame = ttk.Labelframe(
+            self.consumption_frame,
+            text="  Total Disponible en el Período  ",
+            bootstyle="info",
+            padding=10
+        )
+        self.total_available_frame.pack(fill=X, pady=(5, 15))
+
+        self.total_available_label = ttk.Label(
+            self.total_available_frame,
+            text="",
+            font=("Arial", 14, "bold"),
+            bootstyle="info"
+        )
+        self.total_available_label.pack()
+
+        self.breakdown_label = ttk.Label(
+            self.total_available_frame,
+            text="",
+            font=("Arial", 8, "italic"),
+            bootstyle="secondary"
+        )
+        self.breakdown_label.pack(pady=(2, 0))
+
         # Cantidad consumida
-        ttk.Label(self.consumption_frame, text="Cantidad Consumida:*").pack(anchor=W, pady=(5, 2))
+        consumed_label_frame = ttk.Frame(self.consumption_frame)
+        consumed_label_frame.pack(fill=X, pady=(5, 2))
+
+        ttk.Label(consumed_label_frame, text="¿Cuánto Gastaste?*", font=("Arial", 10, "bold")).pack(side=LEFT)
+        ttk.Label(consumed_label_frame, text="(puede incluir lo sobrante)", font=("Arial", 8, "italic"), bootstyle="secondary").pack(side=LEFT, padx=(5, 0))
+
         self.consumed_var = ttk.StringVar()
         self.consumed_entry = ttk.Entry(
             self.consumption_frame,
             textvariable=self.consumed_var,
-            width=30
+            width=30,
+            font=("Arial", 11)
         )
         self.consumed_entry.pack(fill=X, pady=(0, 10))
 
         # Cantidad restante
-        ttk.Label(self.consumption_frame, text="Cantidad Restante:*").pack(anchor=W, pady=(5, 2))
+        remaining_label_frame = ttk.Frame(self.consumption_frame)
+        remaining_label_frame.pack(fill=X, pady=(5, 2))
+
+        ttk.Label(remaining_label_frame, text="¿Cuánto Sobró?*", font=("Arial", 10, "bold")).pack(side=LEFT)
+        ttk.Label(remaining_label_frame, text="(lo que no usaste)", font=("Arial", 8, "italic"), bootstyle="secondary").pack(side=LEFT, padx=(5, 0))
+
         self.remaining_var = ttk.StringVar()
         self.remaining_entry = ttk.Entry(
             self.consumption_frame,
             textvariable=self.remaining_var,
-            width=30
+            width=30,
+            font=("Arial", 11)
         )
-        self.remaining_entry.pack(fill=X, pady=(0, 10))
+        self.remaining_entry.pack(fill=X, pady=(0, 5))
+
+        # Validación visual en tiempo real
+        self.validation_frame = ttk.Frame(self.consumption_frame)
+        self.validation_frame.pack(fill=X, pady=(0, 10))
+
+        self.validation_label = ttk.Label(
+            self.validation_frame,
+            text="",
+            font=("Arial", 9),
+            bootstyle="secondary"
+        )
+        self.validation_label.pack(anchor=W)
+
+        # Bind para validación en tiempo real
+        self.consumed_var.trace_add('write', self._validate_consumption_real_time)
+        self.remaining_var.trace_add('write', self._validate_consumption_real_time)
 
         # Notas de consumo
         ttk.Label(self.consumption_frame, text="Notas de Consumo:").pack(anchor=W, pady=(5, 2))
@@ -230,13 +306,14 @@ class PurchaseForm(ttk.Frame):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill=X, pady=(10, 0), padx=20, side=BOTTOM)
 
-        ttk.Button(
+        self.save_btn = ttk.Button(
             btn_frame,
             text="Guardar",
             command=self.save_purchase,
             bootstyle="success",
             width=15
-        ).pack(side=LEFT, padx=(0, 10))
+        )
+        self.save_btn.pack(side=LEFT, padx=(0, 10))
 
         ttk.Button(
             btn_frame,
@@ -292,6 +369,48 @@ class PurchaseForm(ttk.Frame):
                 quantity_text = f"({last_purchase['quantity']:.2f} {last_purchase['unit']})"
                 self.last_purchase_quantity_label.configure(text=quantity_text)
 
+                # Mostrar stock anterior a la última compra SOLO si es mayor a 0
+                previous_stock = last_purchase.get('initial_stock', 0.0)
+
+                if previous_stock > 0:
+                    # Solo mostrar si hay stock anterior
+                    previous_stock_text = f"{previous_stock:.2f} {last_purchase['unit']}"
+                    self.previous_stock_label.configure(text=previous_stock_text)
+
+                    # Buscar la compra anterior para mostrar su fecha
+                    purchases = self.provider.get_purchases_by_supply(supply_id)
+                    if len(purchases) >= 2:
+                        # Hay al menos 2 compras, la segunda es la anterior
+                        prev_prev_purchase = purchases[1]
+                        prev_prev_date = prev_prev_purchase['purchase_date']
+                        if isinstance(prev_prev_date, str):
+                            prev_prev_date = datetime.strptime(prev_prev_date, "%Y-%m-%d").date()
+                        elif isinstance(prev_prev_date, datetime):
+                            prev_prev_date = prev_prev_date.date()
+
+                        title_text = f"Sobró de {prev_prev_date.strftime('%d/%m/%Y')}:"
+                    else:
+                        title_text = "Sobró de compra anterior:"
+
+                    self.previous_stock_title_label.configure(text=title_text)
+                else:
+                    # Ocultar los labels si no hay stock anterior
+                    self.previous_stock_title_label.configure(text="")
+                    self.previous_stock_label.configure(text="")
+
+                # Calcular y mostrar total disponible
+                total_available = previous_stock + last_purchase['quantity']
+                self.total_available_label.configure(
+                    text=f"{total_available:.2f} {last_purchase['unit']}"
+                )
+
+                # Mostrar el desglose
+                if previous_stock > 0:
+                    breakdown_text = f"({previous_stock:.2f} sobrantes + {last_purchase['quantity']:.2f} comprados)"
+                else:
+                    breakdown_text = f"(Solo los {last_purchase['quantity']:.2f} comprados)"
+                self.breakdown_label.configure(text=breakdown_text)
+
                 self.consumption_frame.pack(fill=X, pady=(10, 0))
         else:
             self.consumption_frame.pack_forget()
@@ -310,8 +429,55 @@ class PurchaseForm(ttk.Frame):
         except ValueError:
             pass
 
+    def _validate_consumption_real_time(self, *args):
+        """Validar consumo en tiempo real mientras el usuario escribe"""
+        if not self.last_purchase_data:
+            return
+
+        try:
+            consumed = float(self.consumed_var.get() or 0)
+            remaining = float(self.remaining_var.get() or 0)
+
+            if consumed == 0 and remaining == 0:
+                self.validation_label.configure(text="", bootstyle="secondary")
+                return
+
+            # Obtener el total disponible
+            last_quantity = self.last_purchase_data['quantity']
+            initial_stock = self.last_purchase_data.get('initial_stock', 0.0)
+            total_available = initial_stock + last_quantity
+
+            # Calcular suma
+            total_accounted = consumed + remaining
+            difference = total_available - total_accounted
+
+            # Mostrar mensaje según resultado
+            if abs(difference) < 0.01:  # Tolerancia
+                self.validation_label.configure(
+                    text=f"✓ Perfecto: {consumed:.2f} + {remaining:.2f} = {total_available:.2f}",
+                    bootstyle="success"
+                )
+            elif difference > 0:
+                self.validation_label.configure(
+                    text=f"⚠ Faltan {difference:.2f} por asignar (Total: {total_available:.2f})",
+                    bootstyle="warning"
+                )
+            else:
+                self.validation_label.configure(
+                    text=f"✗ Te pasaste por {abs(difference):.2f} (Total: {total_available:.2f})",
+                    bootstyle="danger"
+                )
+
+        except ValueError:
+            self.validation_label.configure(text="", bootstyle="secondary")
+
     def save_purchase(self):
         """Save the purchase and consumption if applicable"""
+        # Si está en modo edición, llamar a update_purchase
+        if self.edit_mode:
+            self.update_purchase()
+            return
+
         # Validar datos de compra
         if not self.supply_id:
             Messagebox.show_error("Debe seleccionar un insumo", "Error")
@@ -372,36 +538,44 @@ class PurchaseForm(ttk.Frame):
                 Messagebox.show_error("Las cantidades deben ser números válidos", "Error")
                 return
 
-            # VALIDACIONES DE CONSUMO
+            # VALIDACIONES DE CONSUMO CON STOCK ACUMULATIVO
             if not self.last_purchase_data:
                 Messagebox.show_error("Error: No se encontró información de la última compra", "Error")
                 return
 
             last_quantity = self.last_purchase_data['quantity']
             last_unit = self.last_purchase_data['unit']
+            initial_stock = self.last_purchase_data.get('initial_stock', 0.0)
 
-            # Validación 1: La cantidad consumida no puede ser mayor a la comprada
-            if consumed > last_quantity:
+            # Calcular el stock total disponible (stock anterior + última compra)
+            total_available_stock = initial_stock + last_quantity
+
+            # Validación 1: La cantidad consumida no puede ser mayor al stock total disponible
+            if consumed > total_available_stock:
                 Messagebox.show_error(
                     f"Error de validación:\n\n"
                     f"La cantidad consumida ({consumed:.2f} {last_unit}) no puede ser mayor "
-                    f"a la cantidad comprada en la última compra ({last_quantity:.2f} {last_unit}).\n\n"
+                    f"al stock total disponible.\n\n"
+                    f"Stock anterior: {initial_stock:.2f} {last_unit}\n"
+                    f"Última compra: {last_quantity:.2f} {last_unit}\n"
+                    f"Total disponible: {total_available_stock:.2f} {last_unit}\n\n"
                     f"Por favor, verifica los datos.",
                     "Error de Validación"
                 )
                 return
 
-            # Validación 2: Consumido + Restante debe ser igual a la cantidad comprada
+            # Validación 2: Consumido + Restante debe ser igual al stock total disponible
             total_accounted = consumed + remaining
             tolerance = 0.01  # Tolerancia para errores de redondeo
 
-            if abs(total_accounted - last_quantity) > tolerance:
+            if abs(total_accounted - total_available_stock) > tolerance:
                 Messagebox.show_error(
                     f"Error de validación:\n\n"
                     f"La suma de consumido ({consumed:.2f} {last_unit}) + restante ({remaining:.2f} {last_unit}) "
                     f"= {total_accounted:.2f} {last_unit}\n\n"
-                    f"No coincide con la cantidad comprada: {last_quantity:.2f} {last_unit}\n\n"
-                    f"Diferencia: {abs(total_accounted - last_quantity):.2f} {last_unit}\n\n"
+                    f"No coincide con el stock total disponible: {total_available_stock:.2f} {last_unit}\n"
+                    f"(Stock anterior: {initial_stock:.2f} + Compra: {last_quantity:.2f})\n\n"
+                    f"Diferencia: {abs(total_accounted - total_available_stock):.2f} {last_unit}\n\n"
                     f"Por favor, verifica que los números sean correctos.",
                     "Error de Validación"
                 )
@@ -468,6 +642,8 @@ class PurchaseForm(ttk.Frame):
         self.supply_id = None
         self.supply_name = None
         self.suggested_supplier_id = None
+        self.edit_mode = False
+        self.purchase_id = None
         self.supply_label.configure(text="")
         self.supplier_var.set("")
         self.unit_var.set("")
@@ -479,3 +655,123 @@ class PurchaseForm(ttk.Frame):
         self.remaining_var.set("")
         self.consumption_notes_text.delete('1.0', 'end')
         self.consumption_frame.pack_forget()
+        # Restaurar título y botón para modo nuevo
+        self.title_label.configure(text="Registrar Compra de Insumo")
+        self.save_btn.configure(text="Guardar")
+
+    def set_edit_mode(self, supply_id, supply_name, purchase_data):
+        """Set the form in edit mode with existing purchase data"""
+        self.edit_mode = True
+        self.purchase_id = purchase_data.get('id')
+        self.supply_id = supply_id
+        self.supply_name = supply_name
+        self.supply_label.configure(text=supply_name)
+        self.last_purchase_data = None
+
+        # Cambiar título y botón
+        self.title_label.configure(text="Editar Compra de Insumo")
+        self.save_btn.configure(text="Actualizar")
+
+        # Cargar datos del proveedor
+        supplier_name = purchase_data.get('supplier_name', '')
+        if supplier_name:
+            self.supplier_var.set(supplier_name)
+
+        # Cargar fecha
+        purchase_date = purchase_data.get('purchase_date')
+        if purchase_date:
+            if isinstance(purchase_date, str):
+                purchase_date = datetime.strptime(purchase_date, "%Y-%m-%d").date()
+            elif isinstance(purchase_date, datetime):
+                purchase_date = purchase_date.date()
+            self.date_entry.entry.delete(0, END)
+            self.date_entry.entry.insert(0, purchase_date.strftime("%d/%m/%Y"))
+
+        # Cargar unidad
+        self.unit_var.set(purchase_data.get('unit', ''))
+
+        # Cargar cantidad
+        quantity = purchase_data.get('quantity', 0)
+        self.quantity_var.set(f"{quantity:.2f}" if quantity else "")
+
+        # Cargar precio unitario
+        unit_price = purchase_data.get('unit_price', 0)
+        self.unit_price_var.set(f"{unit_price:.2f}" if unit_price else "")
+
+        # Cargar total
+        total_price = purchase_data.get('total_price', 0)
+        self.total_var.set(f"{total_price:.2f}" if total_price else "")
+
+        # Cargar notas
+        notes = purchase_data.get('notes', '')
+        self.notes_text.delete('1.0', 'end')
+        if notes:
+            self.notes_text.insert('1.0', notes)
+
+        # En modo edición, ocultar la sección de consumo
+        self.consumption_frame.pack_forget()
+        self.is_first_purchase = True  # Para que no pida consumo al guardar
+
+    def update_purchase(self):
+        """Update an existing purchase"""
+        # Validar datos de compra
+        if not self.supply_id or not self.purchase_id:
+            Messagebox.show_error("Error: No se puede actualizar la compra", "Error")
+            return
+
+        # Validar proveedor
+        supplier_name = self.supplier_var.get().strip()
+        if not supplier_name:
+            Messagebox.show_error("Debe seleccionar un proveedor", "Error")
+            return
+
+        supplier_id = self.suppliers_dict.get(supplier_name)
+        if not supplier_id:
+            Messagebox.show_error("Proveedor no válido", "Error")
+            return
+
+        unit = self.unit_var.get().strip()
+        quantity = self.quantity_var.get().strip()
+        unit_price = self.unit_price_var.get().strip()
+        total_price = self.total_var.get().strip()
+        notes = self.notes_text.get('1.0', 'end-1c').strip()
+
+        if not unit or not quantity or not unit_price:
+            Messagebox.show_error("Todos los campos marcados con * son obligatorios", "Error")
+            return
+
+        try:
+            quantity = float(quantity)
+            unit_price = float(unit_price)
+            total_price = float(total_price) if total_price else quantity * unit_price
+        except ValueError:
+            Messagebox.show_error("Cantidad y precios deben ser números válidos", "Error")
+            return
+
+        # Obtener fecha del DateEntry
+        try:
+            purchase_date = self.date_entry.entry.get()
+            purchase_date = datetime.strptime(purchase_date, "%d/%m/%Y").date()
+        except Exception as e:
+            print(f"Error parsing date: {e}, using today")
+            purchase_date = date.today()
+
+        # Actualizar compra
+        success, result = self.provider.update_purchase(
+            self.purchase_id,
+            supplier_id,
+            purchase_date,
+            quantity,
+            unit,
+            unit_price,
+            total_price,
+            notes
+        )
+
+        if success:
+            Messagebox.show_info("Compra actualizada exitosamente", "Éxito")
+            self.clear_form()
+            if self.on_close_callback:
+                self.on_close_callback()
+        else:
+            Messagebox.show_error(f"Error al actualizar la compra: {result}", "Error")
