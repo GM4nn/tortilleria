@@ -56,15 +56,16 @@ class SaleProvider:
     def get_all(self):
 
         db = get_db()
-        
+
         try:
-            
+
             sales = db.query(Sale.id,
                 Sale.date,
-                Sale.total
+                Sale.total,
+                Sale.customer_id
             ).order_by(Sale.date.desc()).all()
             return sales
-        
+
         finally:
             db.close()
 
@@ -74,30 +75,26 @@ class SaleProvider:
         db = get_db()
 
         try:
-            sale = db.query(Sale.id,
-                Sale.date,
-                Sale.total
-            ).filter(Sale.id == sale_id).first()
-            
+            sale = db.query(Sale).filter(Sale.id == sale_id).first()
+
             if sale:
-                details = db.query(SaleDetail).filter(SaleDetail.sale_id == sale_id).all()
-            
                 return {
                     'id': sale.id,
                     'date': sale.date,
                     'total': sale.total,
-            
+                    'customer_id': sale.customer_id,
                     'details': [
                         {
                             'product_id': d.product_id,
+                            'product_name': d.product.name if d.product else 'N/A',
                             'quantity': d.quantity,
                             'unit_price': d.unit_price,
                             'subtotal': d.subtotal
-                        } 
-                        for d in details
+                        }
+                        for d in sale.sales_details
                     ]
                 }
-            return
+            return None
         finally:
             db.close()
 
@@ -109,14 +106,15 @@ class SaleProvider:
         try:
             sales = db.query(Sale.id,
                 Sale.date,
-                Sale.total
+                Sale.total,
+                Sale.customer_id
             ).filter(
                 cast(Sale.date, Date) >= start_date,
                 cast(Sale.date, Date) <= end_date
             ).order_by(Sale.date.desc()).all()
-        
+
             return sales
-        
+
         finally:
             db.close()
 

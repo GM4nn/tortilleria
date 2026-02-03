@@ -7,7 +7,7 @@ class Products(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.content = content
-        
+
         self.setup_ui()
         self.content.get_products()
         self.show_products()
@@ -65,7 +65,7 @@ class Products(ttk.Frame):
         # Limpiar frame
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
-        
+
         # Crear card para cada producto
         for producto_id, icon, nombre, precio in self.content.products_items:
             self.product_card(producto_id, icon, nombre, precio)
@@ -108,20 +108,51 @@ class Products(ttk.Frame):
         )
         lbl_precio.pack(anchor=W, pady=(5, 0))
         
-        # Botón agregar
-        btn_agregar = ttk.Button(
-            card,
-            text="Agregar al Carrito",
-            command=lambda: self.content.add_product_to_car({
-                'id': product_id,
-                'name': name,
-                'price': price
-            }),
-            bootstyle="primary",
-            width=18
-        )
-        btn_agregar.pack(side=RIGHT, padx=15, pady=15)
-    
+        # Quantity selector: [ − ] qty [ + ]
+        qty_frame = ttk.Frame(card)
+        qty_frame.pack(side=RIGHT, padx=15, pady=15)
+
+        current_qty = self._get_cart_qty(product_id)
+
+        ttk.Button(
+            qty_frame,
+            text="−",
+            command=lambda pid=product_id: self._decrement(pid),
+            bootstyle="danger-outline",
+            width=3,
+            state="normal" if current_qty > 0 else "disabled"
+        ).pack(side=LEFT, ipady=8)
+
+        ttk.Label(
+            qty_frame,
+            text=str(current_qty),
+            font=("Arial", 18, "bold"),
+            width=3,
+            anchor="center"
+        ).pack(side=LEFT, padx=8)
+
+        ttk.Button(
+            qty_frame,
+            text="+",
+            command=lambda pid=product_id, n=name, p=price: self._increment(pid, n, p),
+            bootstyle="success",
+            width=3
+        ).pack(side=LEFT, ipady=8)
+
+    def _get_cart_qty(self, product_id):
+        for item in self.content.shopping_cart:
+            if item['id'] == product_id:
+                return item['quantity']
+        return 0
+
+    def _increment(self, product_id, name, price):
+        self.content.add_product_to_car({'id': product_id, 'name': name, 'price': price})
+        self.show_products()
+
+    def _decrement(self, product_id):
+        self.content.remove_one_from_car(product_id)
+        self.show_products()
+
     # mouse events
 
     def _on_mousewheel(self, event):

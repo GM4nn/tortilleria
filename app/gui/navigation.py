@@ -8,7 +8,8 @@ from app.gui.customers.content import CustomersContent
 from app.gui.inventory.content import InventoryContent
 from app.gui.supplies.content import SuppliesContent
 from app.gui.reports.content import ReportsContent
-from app.gui.sales.content import SalesContent
+from app.gui.sales.pos.content import SalesContent
+from app.gui.sales.admin_sales.sales_admin_content import SalesAdminContent
 
 
 class Navigation(tk.Frame):
@@ -78,7 +79,7 @@ class Navigation(tk.Frame):
         items = [
             ("🛒", "Ventas", "sales_menu", True, [
                 ("Punto de Venta", "sales", True),
-                ("Administrar Ventas", "sales_admin", False)
+                ("Administrar Ventas", "sales_admin", True)
             ]),
             ("📦", "Productos", "products_menu", True, [
                 ("Inventario", "inventory", True),
@@ -232,6 +233,7 @@ class Navigation(tk.Frame):
 
         views = {
             "sales": lambda: SalesContent(self.app.content_container, self.app),
+            "sales_admin": lambda: SalesAdminContent(self.app.content_container, self.app),
             "reports": lambda: ReportsContent(self.app.content_container, self.app),
             "inventory": lambda: InventoryContent(self.app.content_container, self.app),
             "customers": lambda: CustomersContent(self.app.content_container, self.app),

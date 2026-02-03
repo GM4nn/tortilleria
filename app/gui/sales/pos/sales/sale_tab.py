@@ -1,8 +1,8 @@
 import ttkbootstrap as ttk
 import tkinter.messagebox as mb
 from ttkbootstrap.constants import *
-from app.gui.sales.products import Products
-from app.gui.sales.shopping_car import ShoppingCar
+from app.gui.sales.pos.sales.products import Products
+from app.gui.sales.pos.sales.shopping_car import ShoppingCar
 from app.data.providers.inventory import inventory_provider
 from app.data.providers.sales import sale_provider
 
@@ -58,10 +58,22 @@ class SaleTab(ttk.Frame):
 
         self.shopping_cart_gui.refresh_shopping_car()
 
+    def remove_one_from_car(self, product_id):
+        for item in self.shopping_cart:
+            if item['id'] == product_id:
+                item['quantity'] -= 1
+                if item['quantity'] <= 0:
+                    self.shopping_cart.remove(item)
+                else:
+                    item['subtotal'] = item['quantity'] * item['price']
+                self.shopping_cart_gui.refresh_shopping_car()
+                return
+
     def delete_product_from_car(self, index):
         if 0 <= index < len(self.shopping_cart):
             del self.shopping_cart[index]
             self.shopping_cart_gui.refresh_shopping_car()
+            self.products.show_products()
 
     def get_total(self):
         self.total = sum(item['subtotal'] for item in self.shopping_cart)
@@ -72,6 +84,7 @@ class SaleTab(ttk.Frame):
         self.shopping_cart = []
         self.total = 0.0
         self.shopping_cart_gui.refresh_shopping_car()
+        self.products.show_products()
 
     def charge(self):
         if not self.shopping_cart:

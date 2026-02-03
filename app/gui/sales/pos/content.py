@@ -1,10 +1,8 @@
 import ttkbootstrap as ttk
 import tkinter.messagebox as mb
 from ttkbootstrap.constants import *
-from app.gui.sales.sale_tab import SaleTab
-from app.gui.sales.order_tab import OrderTab
-from app.gui.sales.orders_list import OrdersList
-
+from app.gui.sales.pos.sales.sale_tab import SaleTab
+from app.gui.sales.pos.orders.order_tab import OrderTab
 
 class SalesContent(ttk.Frame):
     def __init__(self, parent, app):
@@ -33,13 +31,10 @@ class SalesContent(ttk.Frame):
         self.notebook.add(self.tab_pedido, text="  📋 Hacer Pedido  ")
         self.setup_pedido_tab()
 
-        # Tab 3: Ver Pedidos
-        self.tab_ver_pedidos = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab_ver_pedidos, text="  📄 Ver Pedidos  ")
-        self.setup_ver_pedidos_tab()
 
     def setup_venta_tab(self):
         """Configurar el tab de Hacer Venta con sub-tabs dinamicas"""
+
         # Frame contenedor para el notebook de ventas
         self.venta_container = ttk.Frame(self.tab_venta)
         self.venta_container.pack(fill=BOTH, expand=YES)
@@ -67,6 +62,7 @@ class SalesContent(ttk.Frame):
 
     def add_new_sale_tab(self):
         """Agregar una nueva tab de venta"""
+
         self.sale_counter += 1
         tab_name = f"Venta #{self.sale_counter}"
         tab_index = len(self.tab_frames)
@@ -126,6 +122,7 @@ class SalesContent(ttk.Frame):
     def select_tab(self, index):
         """Seleccionar una tab por su indice"""
         self.current_tab_index = index
+
         self.update_tab_styles()
         self.show_current_tab_content()
 
@@ -186,6 +183,7 @@ class SalesContent(ttk.Frame):
 
     def show_current_tab_content(self):
         """Mostrar el contenido de la tab actualmente seleccionada"""
+
         # Ocultar todos los contenidos
         for sale_tab in self.sale_tabs.values():
             sale_tab.pack_forget()
@@ -248,7 +246,3 @@ class SalesContent(ttk.Frame):
         self.order_tab = OrderTab(self.tab_pedido, self.app, self)
         self.order_tab.pack(fill=BOTH, expand=YES)
 
-    def setup_ver_pedidos_tab(self):
-        """Configurar el tab de Ver Pedidos"""
-        self.orders_list = OrdersList(self.tab_ver_pedidos, self.app, self)
-        self.orders_list.pack(fill=BOTH, expand=YES)
