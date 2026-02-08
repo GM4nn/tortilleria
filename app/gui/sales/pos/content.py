@@ -11,6 +11,7 @@ class SalesContent(ttk.Frame):
 
         # Contador para numerar las ventas
         self.sale_counter = 0
+        
         # Diccionario para guardar las tabs de venta {tab_frame: SaleTab}
         self.sale_tabs = {}
 
@@ -110,7 +111,7 @@ class SalesContent(ttk.Frame):
         self.btn_add_tab.pack(side=LEFT, padx=(5, 0))
 
         # Crear el contenido real de la tab
-        sale_tab = SaleTab(self.venta_content_frame, self.app, self, self.sale_counter)
+        sale_tab = SaleTab(self.venta_content_frame, self.app, self)
         self.sale_tabs[str(tab_index)] = sale_tab
 
         # Seleccionar la nueva tab

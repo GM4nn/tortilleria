@@ -1,6 +1,7 @@
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from app.constants import CUSTOMER_CATEGORIES
 from app.data.providers.customers import customer_provider
 
 
@@ -13,7 +14,7 @@ class ShoppingCar(ttk.Frame):
         self.setup_ui()
     
     def setup_ui(self):
-        """Configurar interfaz del panel derecho"""
+        """Configure right panel interface"""
         
         # Header Section
         self.section_total_price()
@@ -34,7 +35,7 @@ class ShoppingCar(ttk.Frame):
         )
         title.pack(pady=10)
         
-        # Frame del total (arriba)
+        # Total frame (above)
         self.frame_total = ttk.Frame(
             self,
             bootstyle="dark",
@@ -68,6 +69,7 @@ class ShoppingCar(ttk.Frame):
 
     def _create_canvas(self):
         """Create or recreate the canvas with scrollbar"""
+
         # Canvas and scrollbar
         self.canvas = ttk.Canvas(self.canvas_frame, highlightthickness=0, borderwidth=0)
         self.scrollbar = ttk.Scrollbar(self.canvas_frame, orient=VERTICAL, command=self.canvas.yview)
@@ -98,6 +100,7 @@ class ShoppingCar(ttk.Frame):
         # Adjust scrollable_frame width to canvas
         def _on_canvas_configure(event):
             self.canvas.itemconfig(self.canvas_window, width=event.width)
+
             # Also update scrollregion when canvas resizes
             bbox = self.canvas.bbox("all")
             if bbox:
@@ -202,6 +205,7 @@ class ShoppingCar(ttk.Frame):
             relief="solid",
             borderwidth=1
         )
+
         # First item has no top padding, rest have 5px top padding
         pady = (0, 5) if index == 0 else 5
         item_frame.pack(fill=X, expand=NO, pady=pady, padx=0)
@@ -276,6 +280,5 @@ class ShoppingCar(ttk.Frame):
         self.canvas.unbind_all("<Button-5>")
 
     def get_mostrador_customer_id(self):
-        """Obtener el ID del cliente Mostrador"""
-        mostrador = customer_provider.get_by_category('Mostrador')
+        mostrador = customer_provider.get_by_category(CUSTOMER_CATEGORIES['Mostrador'])
         return mostrador.id if mostrador else None

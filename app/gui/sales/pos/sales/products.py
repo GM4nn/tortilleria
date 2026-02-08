@@ -20,7 +20,7 @@ class Products(ttk.Frame):
 
         self.tile_gui()
 
-        # Frame con scrollbar
+        # Frame with scrollbar
         self.products_gui()
 
     def tile_gui(self):
@@ -50,7 +50,7 @@ class Products(ttk.Frame):
         self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=scrollbar.set)
 
-        # Configurar para que el scrollable_frame ocupe el ancho del canvas
+        # Set so that the scrollable_frame takes up the width of the canvas
         self.canvas.bind('<Configure>', lambda e: self.canvas.itemconfig(self.canvas_window, width=e.width))
 
         # Enable mouse wheel scrolling
@@ -62,13 +62,13 @@ class Products(ttk.Frame):
 
     def show_products(self):
         """Mostrar productos en cards"""
-        # Limpiar frame
+        # Clean frame
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        # Crear card para cada producto
-        for producto_id, icon, nombre, precio in self.content.products_items:
-            self.product_card(producto_id, icon, nombre, precio)
+        # Create card with for each product
+        for product_id, icon, name, price in self.content.products_items:
+            self.product_card(product_id, icon, name, price)
 
     def product_card(self, product_id, icon, name, price):
 
@@ -140,13 +140,16 @@ class Products(ttk.Frame):
         ).pack(side=LEFT, ipady=8)
 
     def _get_cart_qty(self, product_id):
-        for item in self.content.shopping_cart:
-            if item['id'] == product_id:
-                return item['quantity']
-        return 0
+        return next((item['quantity'] for item in self.content.shopping_cart if item['id'] == product_id), 0)
 
     def _increment(self, product_id, name, price):
-        self.content.add_product_to_car({'id': product_id, 'name': name, 'price': price})
+        self.content.add_product_to_car(
+            {
+                'id': product_id,
+                'name': name,
+                'price': price
+            }
+        )
         self.show_products()
 
     def _decrement(self, product_id):
