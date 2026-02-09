@@ -1,7 +1,7 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.gui.sales.admin_sales.sales.sales_list import SalesList
-from app.gui.sales.admin_sales.orders.orders_list import OrdersList
+from app.gui.sales.admin_sales.orders.order_content import OrderContent
 
 
 class SalesAdminContent(ttk.Frame):
@@ -31,5 +31,5 @@ class SalesAdminContent(ttk.Frame):
         self.sales_list.pack(fill=BOTH, expand=YES)
 
     def setup_pedidos_tab(self):
-        self.orders_list = OrdersList(self.tab_pedidos, self.app, self)
+        self.orders_list = OrderContent(self.tab_pedidos, self.app, self)
         self.orders_list.pack(fill=BOTH, expand=YES)

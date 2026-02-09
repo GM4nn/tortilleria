@@ -78,6 +78,20 @@ ERROR_SENDER = {
     "padx": (5, 100),
 }
 
+# ORDER STATUSES
+
+ORDER_STATUSES_ALL = 'todos'
+ORDER_STATUSES_PENDING = 'pendiente'
+ORDER_STATUSES_COMPLETE = 'completado'
+ORDER_STATUSES_CANCEL = 'cancelado'
+
+ORDER_STATUSES = {
+    ORDER_STATUSES_ALL: {"label": "Todos",  "color": "primary"},
+    ORDER_STATUSES_PENDING:  {"label": "Pendiente",  "color": "warning"},
+    ORDER_STATUSES_COMPLETE: {"label": "Completado", "color": "success"},
+    ORDER_STATUSES_CANCEL:  {"label": "Cancelado",  "color": "secondary"},
+}
+
 # CUSTOMERS
 
 CUSTOMER_MOSTRADOR_NAME = "Cliente Mostrador"
