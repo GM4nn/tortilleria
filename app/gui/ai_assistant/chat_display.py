@@ -1,5 +1,5 @@
-from datetime import datetime
 from tkinter import ttk
+from app.constants import mexico_now
 import tkinter as tk
 
 
@@ -110,7 +110,7 @@ class ChatDisplay(ttk.Frame):
     def add_message(self, sender: dict, message: str):
         """Add a message to the chat display with bubble styling"""
 
-        timestamp = datetime.now().strftime("%H:%M")
+        timestamp = mexico_now().strftime("%H:%M")
         # Container for message alignment
         msg_container = tk.Frame(self.scrollable_frame, bg="#f8f9fa")
         msg_container.pack(fill=tk.X, padx=10, pady=5)

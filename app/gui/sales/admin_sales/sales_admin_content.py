@@ -27,11 +27,9 @@ class SalesAdminContent(ttk.Frame):
         self.setup_pedidos_tab()
 
     def setup_ventas_tab(self):
-        """Configurar tab de Ver Ventas"""
         self.sales_list = SalesList(self.tab_ventas, self.app, self)
         self.sales_list.pack(fill=BOTH, expand=YES)
 
     def setup_pedidos_tab(self):
-        """Configurar tab de Ver Pedidos"""
         self.orders_list = OrdersList(self.tab_pedidos, self.app, self)
         self.orders_list.pack(fill=BOTH, expand=YES)

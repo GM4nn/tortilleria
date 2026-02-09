@@ -1,17 +1,18 @@
 from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from app.data.database import Base
+from app.constants import mexico_now
 
 
 class Order(Base):
     __tablename__ = 'orders'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    date = Column(DateTime, default=func.now())
+    date = Column(DateTime, default=mexico_now)
     total = Column(Float, nullable=False)
     customer_id = Column(Integer, ForeignKey('customers.id'), nullable=False)
     status = Column(String(50), default='pendiente')  # pendiente, completado, cancelado
+    completed_at = Column(DateTime, nullable=True)
     notes = Column(String(500), nullable=True)
 
     # Relationships

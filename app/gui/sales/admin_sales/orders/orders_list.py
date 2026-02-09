@@ -3,6 +3,8 @@ import tkinter.messagebox as mb
 from ttkbootstrap.constants import *
 from app.data.providers.orders import order_provider
 from app.data.providers.customers import customer_provider
+from app.data.providers.refunds import refund_provider
+from app.gui.sales.admin_sales.orders.refund_dialog import RefundDialog
 
 
 class OrdersList(ttk.Frame):
@@ -305,14 +307,24 @@ class OrdersList(ttk.Frame):
             font=("Arial", 16, "bold")
         ).pack(anchor=W)
 
-        # Fecha
+        # Fecha de pedido
         date_str = order_data['date'].strftime("%d/%m/%Y %H:%M") if order_data['date'] else "N/A"
         ttk.Label(
             self.detail_content,
-            text=date_str,
+            text=f"Fecha de pedido: {date_str}",
             font=("Arial", 10),
             bootstyle="secondary"
         ).pack(anchor=W)
+
+        # Fecha de completado
+        if order_data.get('completed_at'):
+            completed_str = order_data['completed_at'].strftime("%d/%m/%Y %H:%M")
+            ttk.Label(
+                self.detail_content,
+                text=f"Fecha de completado: {completed_str}",
+                font=("Arial", 10),
+                bootstyle="success"
+            ).pack(anchor=W)
 
         ttk.Separator(self.detail_content).pack(fill=X, pady=10)
 
@@ -401,6 +413,10 @@ class OrdersList(ttk.Frame):
             bootstyle="inverse-dark"
         ).pack(side=RIGHT, padx=10, pady=8)
 
+        # Seccion de reembolsos (solo si está completado)
+        if order_data['status'] == 'completado':
+            self._show_refunds_section(order_data['id'])
+
         # Botones de acción (solo si está pendiente)
         if order_data['status'] == 'pendiente':
             btn_frame = ttk.Frame(self.detail_content)
@@ -409,7 +425,7 @@ class OrdersList(ttk.Frame):
             ttk.Button(
                 btn_frame,
                 text="Marcar Completado",
-                command=lambda: self.update_order_status(order_data['id'], 'completado'),
+                command=lambda: self.complete_order(order_data),
                 bootstyle="success"
             ).pack(fill=X, pady=2)
 
@@ -420,11 +436,26 @@ class OrdersList(ttk.Frame):
                 bootstyle="danger-outline"
             ).pack(fill=X, pady=2)
 
-    def update_order_status(self, order_id, new_status):
-        """Actualizar estado del pedido"""
-        status_text = {"completado": "completar", "cancelado": "cancelar"}
+    def complete_order(self, order_data):
+        """Abrir dialogo de reembolso y completar pedido"""
+        dialog = RefundDialog(self.winfo_toplevel(), order_data)
+        self.wait_window(dialog)
 
-        if not mb.askyesno("Confirmar", f"¿Desea {status_text.get(new_status, new_status)} este pedido?"):
+        if dialog.result is None:
+            return
+
+        success, result = order_provider.complete_order(order_data['id'], dialog.result)
+
+        if success:
+            mb.showinfo("Éxito", f"Pedido #{order_data['id']} completado")
+            self.load_orders()
+            self._reset_detail_panel()
+        else:
+            mb.showerror("Error", f"Error al completar: {result}")
+
+    def update_order_status(self, order_id, new_status):
+        """Actualizar estado del pedido (cancelar)"""
+        if not mb.askyesno("Confirmar", f"¿Desea cancelar este pedido?"):
             return
 
         success, result = order_provider.update_status(order_id, new_status)
@@ -432,20 +463,68 @@ class OrdersList(ttk.Frame):
         if success:
             mb.showinfo("Éxito", f"Pedido #{order_id} actualizado")
             self.load_orders()
-
-            # Limpiar panel de detalles
-            for widget in self.detail_content.winfo_children():
-                widget.destroy()
-            self.no_selection_label = ttk.Label(
-                self.detail_content,
-                text="Selecciona un pedido\npara ver sus detalles",
-                font=("Arial", 12),
-                bootstyle="secondary",
-                justify=CENTER
-            )
-            self.no_selection_label.pack(expand=YES)
+            self._reset_detail_panel()
         else:
             mb.showerror("Error", f"Error al actualizar: {result}")
+
+    def _reset_detail_panel(self):
+        """Limpiar panel de detalles"""
+        for widget in self.detail_content.winfo_children():
+            widget.destroy()
+        self.no_selection_label = ttk.Label(
+            self.detail_content,
+            text="Selecciona un pedido\npara ver sus detalles",
+            font=("Arial", 12),
+            bootstyle="secondary",
+            justify=CENTER
+        )
+        self.no_selection_label.pack(expand=YES)
+
+    def _show_refunds_section(self, order_id):
+        """Mostrar seccion de reembolsos en el detalle"""
+        refunds = refund_provider.get_by_order(order_id)
+
+        # Filtrar solo los que tienen cantidad > 0
+        refunds_with_return = [r for r in refunds if r['quantity'] > 0]
+
+        if not refunds_with_return:
+            return
+
+        ttk.Separator(self.detail_content).pack(fill=X, pady=5)
+
+        ttk.Label(
+            self.detail_content,
+            text="Devoluciones:",
+            font=("Arial", 11, "bold"),
+            bootstyle="danger"
+        ).pack(anchor=W)
+
+        refunds_frame = ttk.Frame(self.detail_content)
+        refunds_frame.pack(fill=X, pady=(5, 0))
+
+        for refund in refunds_with_return:
+            item_frame = ttk.Frame(refunds_frame, bootstyle="danger", relief="solid", borderwidth=2)
+            item_frame.pack(fill=X, pady=3)
+
+            item_content = ttk.Frame(item_frame)
+            item_content.pack(fill=X, padx=10, pady=8)
+
+            ttk.Label(
+                item_content,
+                text=f"Del producto {refund['product_name']} se devolvio {refund['quantity']:.0f}",
+                font=("Arial", 10, "bold"),
+                bootstyle="danger",
+                wraplength=280
+            ).pack(anchor=W)
+
+            if refund.get('comments'):
+                ttk.Label(
+                    item_content,
+                    text=f"Comentarios: {refund['comments']}",
+                    font=("Arial", 9),
+                    bootstyle="danger",
+                    wraplength=280
+                ).pack(anchor=W, pady=(4, 0))
 
     def on_customer_search_change(self, *args):
         """Manejar cambios en el campo de búsqueda de cliente"""

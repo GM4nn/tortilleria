@@ -2,6 +2,7 @@ from tkinter import messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from datetime import datetime
+from app.constants import mexico_now
 from app.data.providers.supplies import supply_provider
 
 
@@ -223,7 +224,7 @@ class SuppliesForm(ttk.Frame):
         try:
             purchase_date = datetime.strptime(purchase_date_str, "%m/%d/%Y")
         except:
-            purchase_date = datetime.now()
+            purchase_date = mexico_now()
 
         if self.selected_supply_id is None:
 

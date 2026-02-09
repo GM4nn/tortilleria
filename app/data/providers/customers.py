@@ -1,8 +1,6 @@
 from app.data.database import get_db
 from app.models import Customer
-from datetime import datetime
-
-from app.constants import CUSTOMER_CATEGORIES, CUSTOMER_MOSTRADOR_NAME
+from app.constants import CUSTOMER_CATEGORIES, CUSTOMER_MOSTRADOR_NAME, mexico_now
 
 
 class CustomerProvider:
@@ -103,7 +101,7 @@ class CustomerProvider:
                 customer.customer_category = category
                 customer.customer_photo = photo
                 customer.customer_phone = phone
-                customer.updated_at = datetime.now()
+                customer.updated_at = mexico_now()
         
                 db.commit()
         

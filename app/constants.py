@@ -1,4 +1,15 @@
 import os as _os
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Timezone de México
+MEXICO_TZ = ZoneInfo("America/Mexico_City")
+
+
+def mexico_now():
+    """Retorna la fecha/hora actual en zona horaria de México."""
+    return datetime.now(MEXICO_TZ)
+
 
 # DB NAME
 DB_NAME = "tortilleria"
@@ -131,8 +142,10 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     → Para obtener proveedor: JOIN con suppliers usando supplier_id
 
     TABLE: orders
-    ✓ Tiene columnas: id, date, total, customer_id, status, notes
-    ✓ SÍ tiene columna de FECHA: date
+    ✓ Tiene columnas: id, date, total, customer_id, status, completed_at, notes
+    ✓ SÍ tiene columnas de FECHA: date, completed_at
+    ✓ date = fecha en que se creó el pedido
+    ✓ completed_at = fecha en que se marcó como completado (NULL si no está completado)
     ✓ status puede ser: 'pendiente', 'completado', 'cancelado'
     → Para obtener cliente: JOIN con customers usando customer_id
 
@@ -140,6 +153,13 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     ✓ Tiene columnas: id, order_id, product_id, quantity, unit_price, subtotal
     ✗ NO tiene columna de fecha
     → Para obtener fecha: JOIN con orders usando order_id
+    → Para obtener producto: JOIN con products usando product_id
+
+    TABLE: order_refunds
+    ✓ Tiene columnas: id, order_id, product_id, quantity, comments, created_at
+    ✓ SÍ tiene columna de FECHA: created_at
+    ✓ quantity = cantidad de producto devuelta al completar un pedido (puede ser 0)
+    → Para obtener pedido: JOIN con orders usando order_id
     → Para obtener producto: JOIN con products usando product_id
 
     ╔══════════════════════════════════════════════════════════════╗
@@ -169,6 +189,14 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     6. order_details → products:
     FROM order_details od JOIN products p ON od.product_id = p.id
     Úsalo cuando: Necesites nombre o precio del producto en un pedido
+
+    7. order_refunds → orders:
+    FROM order_refunds orf JOIN orders o ON orf.order_id = o.id
+    Úsalo cuando: Necesites info del pedido de una devolución
+
+    8. order_refunds → products:
+    FROM order_refunds orf JOIN products p ON orf.product_id = p.id
+    Úsalo cuando: Necesites nombre del producto devuelto
 
     ╔══════════════════════════════════════════════════════════════╗
     ║ SINTAXIS SQLite PARA FECHAS                                  ║

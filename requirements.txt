@@ -14,3 +14,4 @@ ttkbootstrap==1.18.0
 sqlalchemy>=2.0.0
 alembic>=1.13.0
 anthropic>=0.40.0
+tzdata>=2024.1

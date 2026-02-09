@@ -1,7 +1,7 @@
 from app.data.database import SessionLocal
 from app.models import Supplier
-from datetime import datetime
 from app.data.database import get_db
+from app.constants import mexico_now
 
 class SupplierProvider:
 
@@ -101,7 +101,7 @@ class SupplierProvider:
                 supplier.city = city
                 supplier.product_type = product_type
                 supplier.notes = notes
-                supplier.updated_at = datetime.now()
+                supplier.updated_at = mexico_now()
                 db.commit()
 
                 return True, "Proveedor actualizado"

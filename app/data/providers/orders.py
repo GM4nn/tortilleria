@@ -1,7 +1,8 @@
 from app.models import Order, OrderDetail
+from app.models.order_refund import OrderRefund
 from sqlalchemy import func, cast, Date
 from app.data.database import get_db
-from datetime import datetime
+from app.constants import mexico_now
 
 
 class OrderProvider:
@@ -86,6 +87,7 @@ class OrderProvider:
                     'date': order.date,
                     'total': order.total,
                     'status': order.status,
+                    'completed_at': order.completed_at,
                     'customer_id': order.customer_id,
                     'notes': order.notes,
                     'details': [
@@ -138,12 +140,40 @@ class OrderProvider:
         finally:
             db.close()
 
+    def complete_order(self, order_id, refund_items):
+        db = get_db()
+        try:
+            order = db.query(Order).filter(Order.id == order_id).first()
+            if not order:
+                return False, "Pedido no encontrado"
+
+            # Guardar reembolsos
+            for item in refund_items:
+                refund = OrderRefund(
+                    order_id=order_id,
+                    product_id=item['product_id'],
+                    quantity=item['quantity'],
+                    comments=item.get('comments')
+                )
+                db.add(refund)
+
+            # Marcar como completado
+            order.status = 'completado'
+            order.completed_at = mexico_now()
+            db.commit()
+            return True, order_id
+        except Exception as e:
+            db.rollback()
+            return False, str(e)
+        finally:
+            db.close()
+
     def get_today(self):
 
         db = get_db()
 
         try:
-            today = datetime.now().date()
+            today = mexico_now().date()
 
             result = db.query(
                 func.count(Order.id),

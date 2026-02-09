@@ -6,7 +6,8 @@ Ventas Tab - Sales Reports
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from datetime import datetime, timedelta
+from datetime import timedelta
+from app.constants import mexico_now
 from sqlalchemy import func, and_
 from app.data.database import SessionLocal
 from app.models import Sale, SaleDetail, Product
@@ -80,7 +81,7 @@ class SalesTab(ttk.Frame):
         subtitle.pack(anchor=W, pady=(0, 15))
 
         # Get sales data for last 5 days
-        today = datetime.now().date()
+        today = mexico_now().date()
         five_days_ago = today - timedelta(days=4)
 
         sales_by_date = db.query(

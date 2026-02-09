@@ -2,6 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
 from datetime import datetime, date
+from app.constants import mexico_now
 from app.data.providers.supplies import supply_provider
 
 
@@ -417,7 +418,7 @@ class PurchaseForm(ttk.Frame):
 
         # Establecer fecha de hoy por defecto (formato dd/mm/yyyy)
         self.date_entry.entry.delete(0, END)
-        self.date_entry.entry.insert(0, datetime.now().strftime("%d/%m/%Y"))
+        self.date_entry.entry.insert(0, mexico_now().strftime("%d/%m/%Y"))
 
     def calculate_total(self, event=None):
         """Calculate total price"""

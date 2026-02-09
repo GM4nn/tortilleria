@@ -1,7 +1,7 @@
 from sqlalchemy import func, cast, Date
 from app.models import Sale, SaleDetail
 from app.data.database import get_db
-from datetime import datetime
+from app.constants import mexico_now
 
 
 class SaleProvider:
@@ -38,7 +38,7 @@ class SaleProvider:
         db = get_db()
         
         try:
-            today = datetime.now().date()
+            today = mexico_now().date()
 
             result = db.query(
                 func.count(Sale.id),

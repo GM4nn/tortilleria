@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKe
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.data.database import Base
+from app.constants import mexico_now
 
 
 class Supply(Base):
@@ -11,8 +12,8 @@ class Supply(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     supply_name = Column(String(100), nullable=False, unique=True)  # Nombre del insumo (Maíz, Harina, etc.)
     supplier_id = Column(Integer, ForeignKey('suppliers.id'), nullable=False)  # Proveedor principal
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=mexico_now)
+    updated_at = Column(DateTime, default=mexico_now, onupdate=mexico_now)
 
     # Relationships
     supplier = relationship("Supplier", backref="supplies")
@@ -37,8 +38,8 @@ class SupplyPurchase(Base):
     total_price = Column(Float, nullable=False)  # Precio total
     initial_stock = Column(Float, nullable=False, default=0.0)  # Stock acumulado ANTES de esta compra (restante de compras anteriores)
     notes = Column(Text)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=mexico_now)
+    updated_at = Column(DateTime, default=mexico_now, onupdate=mexico_now)
 
     # Relationships
     supply = relationship("Supply", back_populates="purchases")
@@ -60,8 +61,8 @@ class SupplyConsumption(Base):
     quantity_remaining = Column(Float, nullable=False)  # Cantidad restante
     unit = Column(String(50), nullable=False)  # Unidad de medida
     notes = Column(Text)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=mexico_now)
+    updated_at = Column(DateTime, default=mexico_now, onupdate=mexico_now)
 
     # Relationship
     supply = relationship("Supply", back_populates="consumptions")

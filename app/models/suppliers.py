@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
-from sqlalchemy.sql import func
 from app.data.database import Base
+from app.constants import mexico_now
 
 
 class Supplier(Base):
@@ -15,8 +15,8 @@ class Supplier(Base):
     city = Column(String(100))
     product_type = Column(String(100))  # Tipo de producto que provee (Maíz, Harina, Insumos, etc.)
     notes = Column(Text)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=mexico_now)
+    updated_at = Column(DateTime, default=mexico_now, onupdate=mexico_now)
     active = Column(Boolean, default=True)
 
     def __repr__(self):

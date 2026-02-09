@@ -2,6 +2,7 @@ from app.models import Supply, SupplyPurchase, SupplyConsumption, Supplier
 from sqlalchemy.orm import joinedload
 from app.data.database import get_db
 from datetime import datetime, date
+from app.constants import mexico_now
 
 
 class SupplyProvider:
@@ -128,7 +129,7 @@ class SupplyProvider:
             if supply:
                 supply.supply_name = supply_name
                 supply.supplier_id = supplier_id
-                supply.updated_at = datetime.now()
+                supply.updated_at = mexico_now()
                 db.commit()
                 return True, "Insumo actualizado"
             return False, "Insumo no encontrado"
@@ -251,7 +252,7 @@ class SupplyProvider:
                 purchase.unit_price = unit_price
                 purchase.total_price = total_price
                 purchase.notes = notes
-                purchase.updated_at = datetime.now()
+                purchase.updated_at = mexico_now()
                 db.commit()
                 
                 return True, "Compra actualizada"
