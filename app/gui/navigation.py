@@ -81,18 +81,13 @@ class Navigation(tk.Frame):
                 ("Punto de Venta", "sales", True),
                 ("Administrar Ventas", "sales_admin", True)
             ]),
-            ("📦", "Productos", "products_menu", True, [
-                ("Inventario", "inventory", True),
-                ("Categorías", "categories", False)
-            ]),
+            ("📦", "Inventario", "inventory", True, None),
             ("💵", "Caja", "cash", False, None),
             ("📥", "Compras", "purchases_menu", True, [
                 ("Proveedores", "suppliers", True),
                 ("Insumos", "supplies", True)
             ]),
             ("📈", "Reportes", "reports", True, None),
-            None,
-            ("⚙️", "Configuración", "config", False, None),
             ("👥", "Clientes", "customers", True, None),
             ("🤖", "Asistente IA", "ai_assistant", True, None)
         ]
