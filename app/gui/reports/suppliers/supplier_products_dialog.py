@@ -18,7 +18,7 @@ class SupplierProductsDialog:
         title_frame = ttk.Frame(dialog, padding=20)
         title_frame.pack(fill=X)
         ttk.Label(
-            title_frame, text=f"Historial de compras a {supplier_name}",
+            title_frame, text=f"history de compras a {supplier_name}",
             font=("Segoe UI", 16, "bold")
         ).pack(anchor=W)
 

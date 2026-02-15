@@ -339,9 +339,15 @@ class PurchaseForm(ttk.Frame):
             def _set_pos_left(dialog_self):
                 if dialog_self.parent:
                     popup_width = dialog_self.root.winfo_reqwidth() or 226
-                    xpos = dialog_self.parent.winfo_rootx() - popup_width
+                    screen_width = dialog_self.root.winfo_screenwidth()
+                    entry_right = dialog_self.parent.winfo_rootx() + dialog_self.parent.winfo_width()
                     ypos = dialog_self.parent.winfo_rooty() + dialog_self.parent.winfo_height()
-                    # Asegurar que no se salga por la izquierda
+
+                    # Intentar abrir a la derecha del entry
+                    xpos = entry_right
+                    if xpos + popup_width > screen_width:
+                        # No cabe, alinear borde derecho del popup con el borde derecho del entry
+                        xpos = entry_right - popup_width
                     if xpos < 0:
                         xpos = 0
                     dialog_self.root.geometry(f"+{xpos}+{ypos}")

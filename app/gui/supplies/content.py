@@ -1,10 +1,12 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
-from app.gui.supplies.supplies_grid import SuppliesGrid
-from app.gui.supplies.supply_detail import SupplyDetailView
-from app.gui.supplies.supply_form import SupplyForm
-from app.gui.supplies.purchase_form import PurchaseForm
+from app.gui.supplies.grid.supplies_grid import SuppliesGrid
+from app.gui.supplies.grid.supply_form import SupplyForm
+from app.gui.supplies.detail.supply_detail import SupplyDetailView
+from app.gui.supplies.detail.history.purchase_form import PurchaseForm
+
+from app.data.providers.supplies import supply_provider
 
 
 class SuppliesContent(ttk.Frame):
@@ -51,7 +53,6 @@ class SuppliesContent(ttk.Frame):
         self._current_supply_id = supply_id
 
         # Obtener proveedor sugerido
-        from app.data.providers.supplies import supply_provider
         supply_data = supply_provider.get_supply_by_id(supply_id)
         suggested_supplier_id = supply_data['supplier_id'] if supply_data else None
         supply_name = supply_data['supply_name'] if supply_data else ""
@@ -70,7 +71,7 @@ class SuppliesContent(ttk.Frame):
         )
         self.detail_view.pack(fill=BOTH, expand=YES)
 
-        # Right: Purchase form sidebar (siempre visible en tab historial)
+        # Right: Purchase form sidebar (siempre visible en tab history)
         self.right_frame = ttk.Frame(self.main_container, width=400)
         self.right_frame.pack_propagate(False)
         self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
@@ -96,7 +97,6 @@ class SuppliesContent(ttk.Frame):
         if not self._current_supply_id:
             return
 
-        from app.data.providers.supplies import supply_provider
         supply_data = supply_provider.get_supply_by_id(self._current_supply_id)
         suggested_supplier_id = supply_data['supplier_id'] if supply_data else None
         supply_name = supply_data['supply_name'] if supply_data else ""
@@ -112,7 +112,7 @@ class SuppliesContent(ttk.Frame):
 
     def _on_tab_change(self, tab_name):
         """Show/hide sidebar based on active tab"""
-        if tab_name == "historial":
+        if tab_name == "history":
             # Mostrar sidebar
             if hasattr(self, 'right_frame') and self.right_frame.winfo_exists():
                 self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
@@ -128,7 +128,6 @@ class SuppliesContent(ttk.Frame):
         if not self._current_supply_id:
             return
 
-        from app.data.providers.supplies import supply_provider
         supply_data = supply_provider.get_supply_by_id(self._current_supply_id)
         suggested_supplier_id = supply_data['supplier_id'] if supply_data else None
         supply_name = supply_data['supply_name'] if supply_data else ""

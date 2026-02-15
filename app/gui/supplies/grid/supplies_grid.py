@@ -2,7 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.scrolled import ScrolledFrame
 from app.data.providers.supplies import supply_provider
-from app.gui.supplies.supply_card import SupplyCard
+from app.gui.supplies.grid.supply_card import SupplyCard
 
 
 class SuppliesGrid(ttk.Frame):
