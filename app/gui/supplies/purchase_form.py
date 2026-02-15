@@ -112,6 +112,8 @@ class PurchaseForm(ttk.Frame):
             dateformat="%d/%m/%Y"
         )
         self.date_entry.pack(fill=X, pady=(0, 10))
+        # Fix: reposicionar calendario a la izquierda para que no se corte
+        self._patch_date_entry_position()
 
         # Unidad
         ttk.Label(form_container, text="Unidad:*").pack(anchor=W, pady=(5, 2))
@@ -323,6 +325,36 @@ class PurchaseForm(ttk.Frame):
             bootstyle="secondary",
             width=15
         ).pack(side=LEFT)
+
+    def _patch_date_entry_position(self):
+        """Override DateEntry calendar popup to open to the left instead of right"""
+        original_on_date_ask = self.date_entry._on_date_ask
+
+        def _on_date_ask_fixed():
+            from ttkbootstrap.dialogs import DatePickerDialog
+
+            # Monkey-patch _set_window_position to open left-aligned
+            original_set_pos = DatePickerDialog._set_window_position
+
+            def _set_pos_left(dialog_self):
+                if dialog_self.parent:
+                    popup_width = dialog_self.root.winfo_reqwidth() or 226
+                    xpos = dialog_self.parent.winfo_rootx() - popup_width
+                    ypos = dialog_self.parent.winfo_rooty() + dialog_self.parent.winfo_height()
+                    # Asegurar que no se salga por la izquierda
+                    if xpos < 0:
+                        xpos = 0
+                    dialog_self.root.geometry(f"+{xpos}+{ypos}")
+                else:
+                    original_set_pos(dialog_self)
+
+            DatePickerDialog._set_window_position = _set_pos_left
+            try:
+                original_on_date_ask()
+            finally:
+                DatePickerDialog._set_window_position = original_set_pos
+
+        self.date_entry.button.configure(command=_on_date_ask_fixed)
 
     def _load_suppliers(self):
         """Load suppliers into combobox"""
@@ -709,9 +741,120 @@ class PurchaseForm(ttk.Frame):
         if notes:
             self.notes_text.insert('1.0', notes)
 
-        # En modo edición, ocultar la sección de consumo
-        self.consumption_frame.pack_forget()
-        self.is_first_purchase = True  # Para que no pida consumo al guardar
+        # Buscar consumo asociado a esta compra y mostrarlo
+        self._load_associated_consumption(supply_id, purchase_data)
+
+    def _load_associated_consumption(self, supply_id, purchase_data):
+        """Find and display the consumption associated with this purchase"""
+        supply_full = self.provider.get_supply_by_id(supply_id)
+        if not supply_full:
+            self.consumption_frame.pack_forget()
+            self.is_first_purchase = True
+            return
+
+        purchases = supply_full['purchases']
+        consumptions = supply_full['consumptions']
+
+        # Normalizar fecha de esta compra
+        p_date = purchase_data['purchase_date']
+        if isinstance(p_date, str):
+            p_date = datetime.strptime(p_date, "%Y-%m-%d").date()
+        elif isinstance(p_date, datetime):
+            p_date = p_date.date()
+
+        # Encontrar la compra anterior (la que inició el período que terminó con esta compra)
+        prev_purchase = None
+        for i, p in enumerate(purchases):
+            pd = p['purchase_date']
+            if isinstance(pd, str):
+                pd = datetime.strptime(pd, "%Y-%m-%d").date()
+            elif isinstance(pd, datetime):
+                pd = pd.date()
+
+            if pd == p_date and i + 1 < len(purchases):
+                prev_purchase = purchases[i + 1]
+                break
+
+        if not prev_purchase:
+            # Es la primera compra, no hay consumo asociado
+            self.consumption_frame.pack_forget()
+            self.is_first_purchase = True
+            return
+
+        prev_date = prev_purchase['purchase_date']
+        if isinstance(prev_date, str):
+            prev_date = datetime.strptime(prev_date, "%Y-%m-%d").date()
+        elif isinstance(prev_date, datetime):
+            prev_date = prev_date.date()
+
+        # Buscar consumo entre la compra anterior y esta compra
+        associated_consumption = None
+        for cons in consumptions:
+            start = cons['start_date']
+            if isinstance(start, str):
+                start = datetime.strptime(start, "%Y-%m-%d").date()
+            end = cons['end_date']
+            if isinstance(end, str):
+                end = datetime.strptime(end, "%Y-%m-%d").date()
+
+            if start >= prev_date and end <= p_date:
+                associated_consumption = cons
+                break
+            elif abs((start - prev_date).days) <= 2 and abs((end - p_date).days) <= 2:
+                associated_consumption = cons
+                break
+
+        if not associated_consumption:
+            self.consumption_frame.pack_forget()
+            self.is_first_purchase = True
+            return
+
+        # Hay consumo asociado: mostrar la sección con los datos
+        self.is_first_purchase = False
+        self.last_purchase_data = prev_purchase
+
+        # Llenar info de la compra anterior (la que inició el período)
+        self.last_purchase_date_label.configure(text=prev_date.strftime("%d/%m/%Y"))
+        self.last_purchase_quantity_label.configure(
+            text=f"({prev_purchase['quantity']:.2f} {prev_purchase['unit']})"
+        )
+
+        # Stock anterior
+        previous_stock = prev_purchase.get('initial_stock', 0.0)
+        if previous_stock > 0:
+            self.previous_stock_title_label.configure(text="Sobró de compra anterior:")
+            self.previous_stock_label.configure(
+                text=f"{previous_stock:.2f} {prev_purchase['unit']}"
+            )
+        else:
+            self.previous_stock_title_label.configure(text="")
+            self.previous_stock_label.configure(text="")
+
+        # Total disponible
+        total_available = previous_stock + prev_purchase['quantity']
+        self.total_available_label.configure(
+            text=f"{total_available:.2f} {prev_purchase['unit']}"
+        )
+        if previous_stock > 0:
+            self.breakdown_label.configure(
+                text=f"({previous_stock:.2f} sobrantes + {prev_purchase['quantity']:.2f} comprados)"
+            )
+        else:
+            self.breakdown_label.configure(
+                text=f"(Solo los {prev_purchase['quantity']:.2f} comprados)"
+            )
+
+        # Llenar campos de consumo con los valores existentes
+        self.consumed_var.set(f"{associated_consumption['quantity_consumed']:.2f}")
+        self.remaining_var.set(f"{associated_consumption['quantity_remaining']:.2f}")
+
+        # Notas de consumo
+        self.consumption_notes_text.delete('1.0', 'end')
+        if associated_consumption.get('notes'):
+            self.consumption_notes_text.insert('1.0', associated_consumption['notes'])
+
+        # Mostrar la sección
+        self.consumption_frame.pack(fill=X, pady=(10, 0))
 
     def update_purchase(self):
         """Update an existing purchase"""
