@@ -5,10 +5,10 @@ Análisis detallado de ventas, clientes, insumos y proveedores
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from .tabs.sales_tab import SalesTab
-from .tabs.customers_tab import CustomersTab
-from .tabs.supplies_tab import SuppliesTab
-from .tabs.suppliers_tab import SuppliersTab
+from .sales.sales_content import SalesTab
+from .customers.customers_content import CustomersTab
+from .supplies.supplies_content import SuppliesTab
+from .suppliers.suppliers_content import SuppliersTab
 
 
 class ReportsContent(ttk.Frame):
