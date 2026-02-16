@@ -2,19 +2,18 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.data.providers.supplies import supply_provider
 from app.gui.supplies.detail.history.historial_tab import historyTab
-from app.gui.supplies.detail.periods.periods_tab import periodsTab
+from app.gui.supplies.detail.history.purchase_form import PurchaseForm
+from app.gui.supplies.detail.periods.periodos_tab import periodsTab
 
 
 class SupplyDetailView(ttk.Frame):
-    """Vista de detalle de un insumo: header + tabs + contenido delegado"""
+    """Vista de detalle de un insumo: header + tabs + contenido + sidebar de compras"""
 
-    def __init__(self, parent, app, supply_id, on_back_callback, on_edit_purchase_callback=None, on_tab_change_callback=None):
+    def __init__(self, parent, app, supply_id, on_back_callback):
         super().__init__(parent)
         self.app = app
         self.supply_id = supply_id
         self.on_back_callback = on_back_callback
-        self.on_edit_purchase_callback = on_edit_purchase_callback
-        self.on_tab_change_callback = on_tab_change_callback
         self.provider = supply_provider
         self.supply_data = None
 
@@ -29,15 +28,32 @@ class SupplyDetailView(ttk.Frame):
             ttk.Label(self, text="Insumo no encontrado", font=("Arial", 14, "bold")).pack(pady=50)
             return
 
-        main_layout = ttk.Frame(self)
-        main_layout.pack(fill=BOTH, expand=YES)
+        # Left: header + tabs + tab content
+        self.left_frame = ttk.Frame(self)
+        self.left_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(0, 5))
 
-        self.setup_header(main_layout)
-        self.setup_tabs(main_layout)
+        self.setup_header(self.left_frame)
+        self.setup_tabs(self.left_frame)
 
-        # Frame contenedor para el tab activo
-        self.tab_content_frame = ttk.Frame(main_layout)
+        self.tab_content_frame = ttk.Frame(self.left_frame)
         self.tab_content_frame.pack(fill=BOTH, expand=YES)
+
+        # Right: purchase form sidebar
+        self.right_frame = ttk.Frame(self, width=400)
+        self.right_frame.pack_propagate(False)
+        self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
+
+        self.purchase_form = PurchaseForm(
+            self.right_frame,
+            self.app,
+            on_close_callback=self._on_form_saved
+        )
+        self.purchase_form.pack(fill=BOTH, expand=YES)
+        self.purchase_form.set_supply(
+            self.supply_id,
+            self.supply_data['supply_name'],
+            self.supply_data.get('supplier_id')
+        )
 
         self._show_history_tab()
 
@@ -63,7 +79,7 @@ class SupplyDetailView(ttk.Frame):
         self.current_tab = "history"
 
         self.history_btn = ttk.Button(
-            tab_frame, text="history de Compras",
+            tab_frame, text="Historial de Compras",
             command=lambda: self._switch_tab("history"),
             bootstyle="primary", width=20
         )
@@ -84,16 +100,16 @@ class SupplyDetailView(ttk.Frame):
 
         self.current_tab = tab_name
 
-        if self.on_tab_change_callback:
-            self.on_tab_change_callback(tab_name)
-
         if tab_name == "history":
             self.history_btn.configure(bootstyle="primary")
             self.periods_btn.configure(bootstyle="secondary-outline")
+            self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
+            self._reset_form_to_new()
             self._show_history_tab()
         else:
             self.history_btn.configure(bootstyle="secondary-outline")
             self.periods_btn.configure(bootstyle="primary")
+            self.right_frame.pack_forget()
             self._show_periods_tab()
 
     def _show_history_tab(self):
@@ -103,7 +119,7 @@ class SupplyDetailView(ttk.Frame):
         self.history_tab = historyTab(
             self.tab_content_frame,
             self.supply_data,
-            on_edit_purchase_callback=self.on_edit_purchase_callback
+            on_edit_purchase_callback=self._on_purchase_selected
         )
         self.history_tab.pack(fill=BOTH, expand=YES)
 
@@ -116,6 +132,32 @@ class SupplyDetailView(ttk.Frame):
             self.supply_data
         )
         self.periods_tab.pack(fill=BOTH, expand=YES)
+
+    # ─── Purchase form management ─────────────────────────────────
+
+    def _on_purchase_selected(self, supply_id, supply_name, purchase_data):
+        """Al hacer click en una fila de compra, cargar en el form"""
+        self.purchase_form.clear_form()
+        self.purchase_form.set_edit_mode(supply_id, supply_name, purchase_data)
+
+    def _on_form_saved(self):
+        """Al guardar/cancelar, refrescar data y resetear form"""
+        self.load_supply_data()
+        if self.supply_data and self.current_tab == "history":
+            if hasattr(self, 'history_tab') and self.history_tab.winfo_exists():
+                self.history_tab.refresh(self.supply_data)
+        self._reset_form_to_new()
+
+    def _reset_form_to_new(self):
+        """Resetear form a modo nueva compra"""
+        if not self.supply_data:
+            return
+        self.purchase_form.clear_form()
+        self.purchase_form.set_supply(
+            self.supply_id,
+            self.supply_data['supply_name'],
+            self.supply_data.get('supplier_id')
+        )
 
     def refresh(self):
         self.load_supply_data()

@@ -19,7 +19,8 @@ class SupplyForm(ttk.Frame):
 
     def setup_ui(self):
         """Setup the form UI"""
-        # T\u00edtulo
+
+        
         self.title_label = ttk.Label(
             self,
             text="Nuevo Insumo",
@@ -29,7 +30,12 @@ class SupplyForm(ttk.Frame):
 
         # Formulario
         form_container = ttk.Frame(self)
-        form_container.pack(fill=BOTH, expand=YES, padx=20)
+        form_container.pack(fill=BOTH, expand=YES, padx=10)
+        
+        self.setup_gui_form(form_container)
+        self.setup_gui_actions_buttons(form_container)
+
+    def setup_gui_form(self, form_container):
 
         # ID (solo lectura, se muestra al editar)
         self.id_frame = ttk.Frame(form_container)
@@ -66,6 +72,7 @@ class SupplyForm(ttk.Frame):
         self.supplier_combo.pack(fill=X, pady=(0, 10))
         self.load_suppliers()
 
+    def setup_gui_actions_buttons(self, form_container):
         # Nota informativa
         info_frame = ttk.Frame(form_container)
         info_frame.pack(fill=X, pady=(10, 0))
@@ -75,7 +82,7 @@ class SupplyForm(ttk.Frame):
             text="Nota: Despu\u00e9s de crear el insumo, podr\u00e1s registrar compras desde su detalle.",
             font=("Arial", 9),
             bootstyle="info",
-            wraplength=350
+            wraplength=220
         ).pack(anchor=W)
 
         # Botones
@@ -84,28 +91,35 @@ class SupplyForm(ttk.Frame):
 
         ttk.Button(
             btn_frame,
-            text="Guardar",
-            command=self.save_supply,
+            text="Nuevo",
+            command=self.new_supply,
             bootstyle="success",
-            width=15
-        ).pack(side=LEFT, padx=(0, 10))
+            width=20
+        ).pack(fill=X, pady=5)
 
         ttk.Button(
             btn_frame,
-            text="Cancelar",
-            command=self._cancel,
-            bootstyle="secondary",
-            width=15
-        ).pack(side=LEFT)
+            text="Guardar",
+            command=self.save_supply,
+            bootstyle="primary",
+            width=20
+        ).pack(fill=X, pady=5)
 
-        if self.selected_supply_id is None:
-            ttk.Button(
-                btn_frame,
-                text="Limpiar",
-                command=self.clear_form,
-                bootstyle="secondary-outline",
-                width=15
-            ).pack(side=RIGHT)
+        ttk.Button(
+            btn_frame,
+            text="Eliminar",
+            command=self.delete_supply,
+            bootstyle="danger",
+            width=20
+        ).pack(fill=X, pady=5)
+
+        ttk.Button(
+            btn_frame,
+            text="Limpiar",
+            command=self.clear_form,
+            bootstyle="secondary-outline",
+            width=20
+        ).pack(fill=X, pady=5)
 
     def load_suppliers(self):
         """Load suppliers list"""
@@ -154,6 +168,33 @@ class SupplyForm(ttk.Frame):
             else:
                 Messagebox.show_error(f"No se pudo actualizar el insumo: {result}", "Error")
 
+    def new_supply(self):
+        """Limpiar formulario y enfocar nombre"""
+        self.clear_form()
+        self.name_entry.focus()
+
+    def delete_supply(self):
+        """Eliminar el insumo seleccionado"""
+        if self.selected_supply_id is None:
+            Messagebox.show_warning("Seleccione un insumo para eliminar", "Advertencia")
+            return
+
+        confirm = Messagebox.yesno(
+            f"¿Está seguro que desea eliminar el insumo '{self.name_var.get()}'?",
+            "Confirmar eliminación"
+        )
+        if not confirm:
+            return
+
+        success, result = self.provider.delete_supply(self.selected_supply_id)
+        if success:
+            Messagebox.show_info("Insumo eliminado exitosamente", "Éxito")
+            self.clear_form()
+            if self.on_close_callback:
+                self.on_close_callback()
+        else:
+            Messagebox.show_error(f"No se pudo eliminar el insumo: {result}", "Error")
+
     def load_supply(self, supply_data):
         """Load supply data for editing"""
         self.selected_supply_id = supply_data['id']
@@ -169,9 +210,3 @@ class SupplyForm(ttk.Frame):
         self.title_label.configure(text="Nuevo Insumo")
         self.name_var.set("")
         self.supplier_var.set("")
-
-    def _cancel(self):
-        """Handle cancel button"""
-        self.clear_form()
-        if self.on_close_callback:
-            self.on_close_callback()
