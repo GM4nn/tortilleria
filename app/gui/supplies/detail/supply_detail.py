@@ -2,7 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.data.providers.supplies import supply_provider
 from app.gui.supplies.detail.history.content import HistoryContent
-from app.gui.supplies.detail.periods.periodos_tab import periodsTab
+from app.gui.supplies.detail.periods.content import PeriodsContent
 
 
 class SupplyDetailView(ttk.Frame):
@@ -118,7 +118,7 @@ class SupplyDetailView(ttk.Frame):
     def _show_periods_tab(self):
         self._clear_tab()
 
-        self.periods_tab = periodsTab(
+        self.periods_tab = PeriodsContent(
             self.tab_content_frame,
             self.supply_data
         )
