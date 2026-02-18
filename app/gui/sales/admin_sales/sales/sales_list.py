@@ -3,6 +3,7 @@ from ttkbootstrap.constants import *
 from ttkbootstrap.tableview import Tableview
 from ttkbootstrap.widgets import DateEntry
 from app.data.providers.sales import sale_provider
+from app.gui.components.server_paginated_table import ServerPaginatedTableview
 from app.gui.sales.admin_sales.sales.sale_detail import SaleDetail
 from datetime import timedelta, datetime
 from app.constants import mexico_now
@@ -16,7 +17,6 @@ class SalesList(ttk.Frame):
         self.all_sales = []
 
         self.setup_ui()
-        self.load_sales()
 
     def setup_ui(self):
 
@@ -94,16 +94,15 @@ class SalesList(ttk.Frame):
         table_frame = ttk.Frame(parent)
         table_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(0, 10))
 
-        self.table = Tableview(
+        self.table = ServerPaginatedTableview(
             master=table_frame,
             coldata=columns,
-            rowdata=[],
-            paginated=True,
-            searchable=False,
+            fetch_page=self._fetch_sales_page,
+            count_rows=sale_provider.get_count,
+            pagesize=40,
             bootstyle=PRIMARY,
-            pagesize=15,
-            height=20
         )
+
         self.table.pack(fill=BOTH, expand=YES)
 
         self.table.view.bind('<<TreeviewSelect>>', self.on_sale_select)
@@ -111,6 +110,14 @@ class SalesList(ttk.Frame):
     def setup_detail_panel(self, parent):
         self.detail_panel = SaleDetail(parent)
         self.detail_panel.pack(side=RIGHT, fill=BOTH, expand=YES)
+
+    def _fetch_sales_page(self, offset, limit):
+        sales = sale_provider.get_all(offset, limit)
+        rows = []
+        for sale in sales:
+            date_str = sale.date.strftime("%d/%m/%Y %H:%M") if sale.date else "N/A"
+            rows.append([sale.id, date_str, f"${sale.total:.2f}"])
+        return rows
 
     def on_sale_select(self, _event):
 
@@ -128,18 +135,7 @@ class SalesList(ttk.Frame):
         self.detail_panel.show_sale(sale_id)
 
     def load_sales(self):
-        sales = sale_provider.get_all()
-        self.all_sales = []
-
-        for sale in sales:
-            date_str = sale.date.strftime("%d/%m/%Y %H:%M") if sale.date else "N/A"
-            self.all_sales.append({
-                'id': sale.id,
-                'date': date_str,
-                'total': f"${sale.total:.2f}"
-            })
-
-        self.display_sales(self.all_sales)
+        self.table.refresh()
 
     def filter_sales_by_date(self):
         start = self.date_start.entry.get()
@@ -175,20 +171,3 @@ class SalesList(ttk.Frame):
         self.date_end.entry.insert(0, now.strftime("%d/%m/%Y"))
 
         self.load_sales()
-
-    def display_sales(self, sales):
-
-        self.table.delete_rows()
-
-        rows = []
-        for sale in sales:
-            rows.append([
-                sale['id'],
-                sale['date'],
-                sale['total']
-            ])
-
-        if rows:
-            self.table.insert_rows(0, rows)
-
-        self.table.load_table_data()

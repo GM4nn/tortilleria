@@ -53,19 +53,33 @@ class SaleProvider:
             db.close()
 
 
-    def get_all(self):
+    def get_all(self, offset=0, limit=None):
 
         db = get_db()
 
         try:
-
-            sales = db.query(Sale.id,
+            query = db.query(
+                Sale.id,
                 Sale.date,
                 Sale.total,
                 Sale.customer_id
-            ).order_by(Sale.date.desc()).all()
-            return sales
+            ).order_by(Sale.date.desc())
 
+            if limit is not None:
+                print(f"offset: {offset}, limit {limit}")
+                query = query.offset(offset).limit(limit)
+
+            return query.all()
+
+        finally:
+            db.close()
+
+    def get_count(self):
+
+        db = get_db()
+
+        try:
+            return db.query(func.count(Sale.id)).scalar() or 0
         finally:
             db.close()
 
