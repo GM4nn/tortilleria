@@ -14,7 +14,7 @@ class SalesList(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.content = content
-        self.all_sales = []
+        self._filters = {}
 
         self.setup_ui()
 
@@ -98,7 +98,7 @@ class SalesList(ttk.Frame):
             master=table_frame,
             coldata=columns,
             fetch_page=self._fetch_sales_page,
-            count_rows=sale_provider.get_count,
+            count_rows=lambda: sale_provider.get_count(self._filters),
             pagesize=40,
             bootstyle=PRIMARY,
         )
@@ -112,7 +112,7 @@ class SalesList(ttk.Frame):
         self.detail_panel.pack(side=RIGHT, fill=BOTH, expand=YES)
 
     def _fetch_sales_page(self, offset, limit):
-        sales = sale_provider.get_all(offset, limit)
+        sales = sale_provider.get_all(offset, limit, self._filters)
         rows = []
         for sale in sales:
             date_str = sale.date.strftime("%d/%m/%Y %H:%M") if sale.date else "N/A"
@@ -147,27 +147,9 @@ class SalesList(ttk.Frame):
         except ValueError:
             return
 
-        sales = sale_provider.get_by_date_range(start_date, end_date)
-        filtered = []
-
-        for sale in sales:
-            date_str = sale.date.strftime("%d/%m/%Y %H:%M") if sale.date else "N/A"
-            filtered.append({
-                'id': sale.id,
-                'date': date_str,
-                'total': f"${sale.total:.2f}"
-            })
-
-        self.all_sales = filtered
-        self.display_sales(self.all_sales)
+        self._filters = sale_provider.build_date_range_filter(start_date, end_date)
+        self.table.refresh()
 
     def clear_date_filter(self):
-
-        self.date_start.entry.delete(0, 'end')
-        self.date_end.entry.delete(0, 'end')
-
-        now = mexico_now()
-        self.date_start.entry.insert(0, (now - timedelta(days=30)).strftime("%d/%m/%Y"))
-        self.date_end.entry.insert(0, now.strftime("%d/%m/%Y"))
-
-        self.load_sales()
+        self._filters = None
+        self.table.refresh()

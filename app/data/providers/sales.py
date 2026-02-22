@@ -53,7 +53,7 @@ class SaleProvider:
             db.close()
 
 
-    def get_all(self, offset=0, limit=None):
+    def get_all(self, offset=0, limit=None, filters=None):
 
         db = get_db()
 
@@ -63,10 +63,14 @@ class SaleProvider:
                 Sale.date,
                 Sale.total,
                 Sale.customer_id
-            ).order_by(Sale.date.desc())
+            )
+
+            if filters:
+                query = query.filter(*filters)
+
+            query = query.order_by(Sale.date.desc())
 
             if limit is not None:
-                print(f"offset: {offset}, limit {limit}")
                 query = query.offset(offset).limit(limit)
 
             return query.all()
@@ -74,14 +78,23 @@ class SaleProvider:
         finally:
             db.close()
 
-    def get_count(self):
+    def get_count(self, filters=None):
 
         db = get_db()
 
         try:
-            return db.query(func.count(Sale.id)).scalar() or 0
+            query = db.query(func.count(Sale.id))
+            if filters:
+                query = query.filter(*filters)
+            return query.scalar() or 0
         finally:
             db.close()
+
+    def build_date_range_filter(self, start_date, end_date):
+        return [
+            func.date(Sale.date) >= start_date.isoformat(),
+            func.date(Sale.date) <= end_date.isoformat()
+        ]
 
 
     def get_by_id(self, sale_id):
@@ -112,25 +125,6 @@ class SaleProvider:
         finally:
             db.close()
 
-
-    def get_by_date_range(self, start_date, end_date):
-
-        db = get_db()
-
-        try:
-            sales = db.query(Sale.id,
-                Sale.date,
-                Sale.total,
-                Sale.customer_id
-            ).filter(
-                cast(Sale.date, Date) >= start_date,
-                cast(Sale.date, Date) <= end_date
-            ).order_by(Sale.date.desc()).all()
-
-            return sales
-
-        finally:
-            db.close()
 
 
 sale_provider = SaleProvider()
