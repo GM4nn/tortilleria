@@ -18,5 +18,5 @@ class PeriodsContent(ttk.Frame):
         self.summary = CurrentPeriodSummary(self, self.supply_data)
         self.summary.pack(fill=X, pady=(0, 5))
 
-        self.cards = PeriodCards(self, self.supply_data)
+        self.cards = PeriodCards(self, self.supply_data['id'])
         self.cards.pack(fill=BOTH, expand=YES)

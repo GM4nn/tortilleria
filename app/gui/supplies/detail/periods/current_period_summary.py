@@ -77,9 +77,14 @@ class CurrentPeriodSummary(ttk.Frame):
         kpi_frame = ttk.Frame(card)
         kpi_frame.pack(fill=X)
 
-        self._kpi(kpi_frame, "Compra", f"{previous['quantity']:.2f} {unit}", "info")
+        if prev_remaining > 0:
+            breakdown = f"{previous['quantity']:.2f} comprados + {prev_remaining:.2f} sobrantes"
+        else:
+            breakdown = f"{previous['quantity']:.2f} comprados"
+        self._kpi_with_detail(kpi_frame, f"Disponible ({start_str})", f"{total_available:.2f} {unit}", breakdown, "info")
         self._kpi(kpi_frame, "Consumido", f"{consumed:.2f} {unit}", "danger")
         self._kpi(kpi_frame, "Restante", f"{curr_remaining:.2f} {unit}", "success")
+        self._kpi(kpi_frame, f"Compra ({end_str})", f"{latest['quantity']:.2f} {unit}", "info")
 
         # Inventario disponible = remaining + quantity de la ultima compra
         inv = curr_remaining + latest['quantity']
@@ -98,6 +103,13 @@ class CurrentPeriodSummary(ttk.Frame):
         f.pack(side=LEFT, fill=X, expand=YES, padx=(0, 15))
         ttk.Label(f, text=label, font=("Arial", 9), bootstyle="secondary").pack(anchor=W)
         ttk.Label(f, text=value, font=("Arial", 12, "bold"), bootstyle=style).pack(anchor=W)
+
+    def _kpi_with_detail(self, parent, label, value, detail, style):
+        f = ttk.Frame(parent)
+        f.pack(side=LEFT, fill=X, expand=YES, padx=(0, 15))
+        ttk.Label(f, text=label, font=("Arial", 9), bootstyle="secondary").pack(anchor=W)
+        ttk.Label(f, text=value, font=("Arial", 14, "bold"), bootstyle=style).pack(anchor=W)
+        ttk.Label(f, text=detail, font=("Arial", 9, "bold"), bootstyle="dark").pack(anchor=W)
 
     @staticmethod
     def _to_date(value):

@@ -85,10 +85,61 @@ class PurchaseForm(ttk.Frame):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill=X, pady=(10, 0), padx=20, side=BOTTOM)
 
-        self.save_btn = ttk.Button(btn_frame, text="Guardar", command=self.save_purchase, bootstyle="success", width=15)
-        self.save_btn.pack(side=LEFT, padx=(0, 10))
+        ttk.Button(
+            btn_frame, text="Nuevo", command=self._new_purchase,
+            bootstyle="success", width=20
+        ).pack(fill=X, pady=5)
 
-        ttk.Button(btn_frame, text="Cancelar", command=self.on_close_callback, bootstyle="secondary", width=15).pack(side=LEFT)
+        self.save_btn = ttk.Button(
+            btn_frame, text="Guardar", command=self.save_purchase,
+            bootstyle="primary", width=20
+        )
+        self.save_btn.pack(fill=X, pady=5)
+
+        self.delete_btn = ttk.Button(
+            btn_frame, text="Eliminar", command=self._delete_purchase,
+            bootstyle="danger", width=20
+        )
+        self.delete_btn.pack(fill=X, pady=5)
+        self.delete_btn.configure(state=DISABLED)
+
+        ttk.Button(
+            btn_frame, text="Limpiar", command=self._on_clear,
+            bootstyle="secondary-outline", width=20
+        ).pack(fill=X, pady=5)
+
+    def _new_purchase(self):
+        sid, sname, sup_id = self.supply_id, self.supply_name, self.suggested_supplier_id
+        self.clear_form()
+        if sid and sname:
+            self.set_supply(sid, sname, sup_id)
+        self.purchase_inputs.date_entry.entry.focus()
+
+    def _delete_purchase(self):
+        if not self.edit_mode or not self.purchase_id:
+            return
+
+        confirm = Messagebox.yesno(
+            "¿Esta seguro que desea eliminar esta compra?",
+            "Confirmar eliminacion"
+        )
+        if confirm != "Yes":
+            return
+
+        success, result = self.provider.delete_purchase(self.purchase_id)
+        if success:
+            Messagebox.show_info("Compra eliminada exitosamente", "Exito")
+            self.clear_form()
+            if self.on_close_callback:
+                self.on_close_callback()
+        else:
+            Messagebox.show_error(f"Error al eliminar: {result}", "Error")
+
+    def _on_clear(self):
+        sid, sname, sup_id = self.supply_id, self.supply_name, self.suggested_supplier_id
+        self.clear_form()
+        if sid and sname:
+            self.set_supply(sid, sname, sup_id)
 
     # ─── Set supply / Edit mode ───────────────────────────────────
 
@@ -169,6 +220,7 @@ class PurchaseForm(ttk.Frame):
 
         self.title_label.configure(text="Editar Compra de Insumo")
         self.save_btn.configure(text="Actualizar")
+        self.delete_btn.configure(state=NORMAL)
 
         pi = self.purchase_inputs
 
@@ -461,3 +513,4 @@ class PurchaseForm(ttk.Frame):
 
         self.title_label.configure(text="Registrar Compra de Insumo")
         self.save_btn.configure(text="Guardar")
+        self.delete_btn.configure(state=DISABLED)

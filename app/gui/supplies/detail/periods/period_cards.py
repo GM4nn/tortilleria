@@ -1,6 +1,7 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from ttkbootstrap.tableview import Tableview
+from app.gui.components.server_paginated_table import ServerPaginatedTableview
+from app.data.providers.supplies import supply_provider
 from datetime import datetime
 
 
@@ -9,55 +10,71 @@ MESES = {
     7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
 }
 
+COLUMNS = [
+    {"text": "Desde", "stretch": False, "width": 100},
+    {"text": "Hasta", "stretch": False, "width": 100},
+    {"text": "Compra", "stretch": False, "width": 100},
+    {"text": "Sobrante", "stretch": False, "width": 80},
+    {"text": "Disponible", "stretch": False, "width": 90},
+    {"text": "Consumido", "stretch": False, "width": 90},
+    {"text": "Restante", "stretch": False, "width": 90},
+    {"text": "% Consumo", "stretch": True, "width": 90},
+]
+
 
 class PeriodCards(ttk.Frame):
-    """Tabla de periodos de consumo derivados de compras consecutivas"""
+    """Tabla de periodos de consumo con paginacion server-side"""
 
-    def __init__(self, parent, supply_data):
+    def __init__(self, parent, supply_id):
         super().__init__(parent)
-        self.supply_data = supply_data
+        self.supply_id = supply_id
+        self.provider = supply_provider
         self.setup_ui()
 
     def setup_ui(self):
-        if not self.supply_data['purchases']:
-            ttk.Label(self, text="No hay compras registradas", font=("Arial", 10), bootstyle="secondary").pack(pady=20)
+        count = self.provider.count_periods(self.supply_id)
+
+        if count == 0:
+            ttk.Label(
+                self,
+                text="No hay suficientes compras para crear periodos",
+                font=("Arial", 10),
+                bootstyle="secondary"
+            ).pack(pady=20)
             return
 
-        periods = self._create_periods()
+        self.table = ServerPaginatedTableview(
+            master=self,
+            coldata=COLUMNS,
+            fetch_page=self._fetch_page,
+            count_rows=self._count_rows,
+            pagesize=10,
+            searchable=False,
+            bootstyle=PRIMARY,
+            height=10
+        )
+        self.table.pack(fill=BOTH, expand=YES)
 
-        if not periods:
-            ttk.Label(self, text="No hay suficientes compras para crear periodos", font=("Arial", 10), bootstyle="secondary").pack(pady=20)
-            return
-
-        columns = [
-            {"text": "Desde", "stretch": False, "width": 100},
-            {"text": "Hasta", "stretch": False, "width": 100},
-            {"text": "Compra", "stretch": False, "width": 100},
-            {"text": "Sobrante", "stretch": False, "width": 80},
-            {"text": "Disponible", "stretch": False, "width": 90},
-            {"text": "Consumido", "stretch": False, "width": 90},
-            {"text": "Restante", "stretch": False, "width": 90},
-            {"text": "% Consumo", "stretch": False, "width": 90},
-        ]
+    def _fetch_page(self, offset, limit):
+        periods = self.provider.get_periods_paginated(self.supply_id, offset, limit)
 
         rows = []
         for p in periods:
-            prev = p['purchase']
-            prev_remaining = prev.get('remaining', 0.0)
-            total = prev_remaining + prev['quantity']
+            s = self._to_date(p['start_date'])
+            e = self._to_date(p['end_date'])
+            desde = f"{s.day}/{MESES[s.month]}/{s.year}" if s else "?"
+            hasta = f"{e.day}/{MESES[e.month]}/{e.year}" if e else "?"
 
-            s, e = p['start_date'], p['end_date']
-            desde = f"{s.day}/{MESES[s.month]}/{s.year}"
-            hasta = f"{e.day}/{MESES[e.month]}/{e.year}"
-
+            total = p['total_available']
             consumed = p['consumed']
             remaining = p['remaining']
+            prev_remaining = p['prev_remaining']
             pct = f"{consumed / total * 100:.0f}%" if total > 0 else "-"
 
             rows.append([
                 desde,
                 hasta,
-                f"{prev['quantity']:.2f} {prev['unit']}",
+                f"{p['quantity']:.2f} {p['unit']}",
                 f"{prev_remaining:.2f}" if prev_remaining > 0 else "-",
                 f"{total:.2f}",
                 f"{consumed:.2f}",
@@ -65,50 +82,10 @@ class PeriodCards(ttk.Frame):
                 pct,
             ])
 
-        self.table = Tableview(
-            master=self,
-            coldata=columns,
-            rowdata=rows,
-            paginated=True,
-            searchable=False,
-            bootstyle=PRIMARY,
-            pagesize=10,
-            height=10
-        )
-        self.table.pack(fill=BOTH, expand=YES)
+        return rows
 
-    # ─── Crear periodos ───────────────────────────────────────────
-
-    def _create_periods(self):
-        """Derivar periodos de consumo a partir de compras consecutivas.
-        consumed = (prev.remaining + prev.quantity) - curr.remaining
-        """
-        purchases = self.supply_data['purchases']
-        if len(purchases) < 2:
-            return []
-
-        periods = []
-        for i in range(len(purchases) - 1):
-            curr = purchases[i]      # compra mas reciente
-            prev = purchases[i + 1]  # compra anterior
-            curr_date = self._to_date(curr['purchase_date'])
-            prev_date = self._to_date(prev['purchase_date'])
-
-            prev_remaining = prev.get('remaining', 0.0)
-            total_available = prev_remaining + prev['quantity']
-            curr_remaining = curr.get('remaining', 0.0)
-            consumed = max(0, total_available - curr_remaining)
-
-            periods.append({
-                'start_date': prev_date,
-                'end_date': curr_date,
-                'purchase': prev,
-                'consumed': consumed,
-                'remaining': curr_remaining,
-                'total_available': total_available,
-            })
-
-        return periods
+    def _count_rows(self):
+        return self.provider.count_periods(self.supply_id)
 
     @staticmethod
     def _to_date(value):
@@ -119,3 +96,7 @@ class PeriodCards(ttk.Frame):
         if hasattr(value, 'year'):
             return value
         return None
+
+    def refresh(self):
+        if hasattr(self, 'table'):
+            self.table.refresh()

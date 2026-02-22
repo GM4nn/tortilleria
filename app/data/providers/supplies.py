@@ -214,6 +214,51 @@ class SupplyProvider:
         finally:
             db.close()
 
+    def get_periods_paginated(self, supply_id, offset=0, limit=10):
+        """Get consumption periods (derived from consecutive purchases) with pagination.
+        Each period needs 2 consecutive purchases, so we fetch limit+1 purchases at the given offset.
+        """
+        db = get_db()
+        try:
+            purchases = db.query(SupplyPurchase).options(
+                joinedload(SupplyPurchase.supplier)
+            ).filter(
+                SupplyPurchase.supply_id == supply_id
+            ).order_by(
+                SupplyPurchase.purchase_date.desc()
+            ).offset(offset).limit(limit + 1).all()
+
+            periods = []
+            for i in range(len(purchases) - 1):
+                curr = purchases[i]
+                prev = purchases[i + 1]
+                prev_remaining = prev.remaining or 0.0
+                total_available = prev_remaining + prev.quantity
+                curr_remaining = curr.remaining or 0.0
+                consumed = max(0, total_available - curr_remaining)
+
+                periods.append({
+                    'start_date': prev.purchase_date,
+                    'end_date': curr.purchase_date,
+                    'quantity': prev.quantity,
+                    'unit': prev.unit,
+                    'prev_remaining': prev_remaining,
+                    'total_available': total_available,
+                    'consumed': consumed,
+                    'remaining': curr_remaining,
+                })
+
+            print(f"limit {limit} offset {offset}")
+
+            return periods
+        finally:
+            db.close()
+
+    def count_periods(self, supply_id):
+        """Count total periods (= total purchases - 1)"""
+        count = self.count_purchases(supply_id)
+        return max(0, count - 1)
+
     def has_previous_purchases(self, supply_id):
         """Check if a supply has previous purchases"""
         db = get_db()
