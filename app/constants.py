@@ -184,21 +184,20 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     → Para obtener fecha: JOIN con orders usando order_id
     → Para obtener producto: JOIN con products usando product_id
 
-    TABLE: order_refunds
+    TABLE: order_refunds (devoluciones/pérdidas de producto)
     ✓ Tiene columnas: id, order_id, product_id, quantity, comments, created_at
     ✓ SÍ tiene columna de FECHA: created_at
     ✓ quantity = cantidad de producto devuelta al completar un pedido (puede ser 0)
+    ✓ ESTA ES LA TABLA DE PÉRDIDAS: cuando el usuario pregunte por "pérdidas", "devoluciones", "mermas" o "reembolsos", USA ESTA TABLA
+    ✓ Para calcular pérdida en dinero: quantity * unit_price (JOIN con order_details usando order_id y product_id)
     → Para obtener pedido: JOIN con orders usando order_id
     → Para obtener producto: JOIN con products usando product_id
 
-    TABLE: cash_cuts (cortes de caja)
+    TABLE: cash_cuts (cierre diario de caja - NO es pérdidas)
     ✓ Tiene columnas: id, opened_at, closed_at, sales_count, orders_count, sales_total, orders_total, expected_total, declared_cash, declared_card, declared_transfer, declared_total, difference, notes
     ✓ SÍ tiene columnas de FECHA: opened_at, closed_at
-    ✓ opened_at = inicio del periodo (fecha del corte anterior o inicio de operaciones)
-    ✓ closed_at = fecha en que se registró el corte
-    ✓ expected_total = sales_total + orders_total (lo que debería haber en caja)
-    ✓ declared_total = declared_cash + declared_card + declared_transfer (lo que el usuario declaró)
-    ✓ difference = declared_total - expected_total (positivo = sobrante, negativo = faltante)
+    ✓ Solo registra el arqueo de caja al final del día (cuánto dinero había vs cuánto se esperaba)
+    ✗ NO usar para calcular pérdidas - difference solo indica sobrante/faltante de efectivo en caja
 
     TABLE: customer_product_prices (precios personalizados por cliente)
     ✓ Tiene columnas: id, customer_id, product_id, custom_price, created_at, updated_at

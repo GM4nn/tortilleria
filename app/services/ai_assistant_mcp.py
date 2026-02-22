@@ -43,6 +43,7 @@ class AIAssistantMCP:
         """
 
         executed_queries = []
+        empty_results_count = 0
         messages = [{"role": "user", "content": question}]
 
         try:
@@ -127,9 +128,10 @@ class AIAssistantMCP:
                                     )
 
                                     if is_empty:
-                                        # Return clear message that data is empty
-                                        content = json.dumps([], ensure_ascii=False) + "\n\n⚠️ DATOS VACÍOS: La consulta no retornó resultados. Responde al usuario que no hay datos disponibles para su pregunta (ejemplo: 'No hay ventas de tortillas de maíz este mes' o 'No se encontraron datos para este período')."
+                                        empty_results_count += 1
+                                        content = json.dumps([], ensure_ascii=False) + "\n\n⚠️ DATOS VACÍOS: La consulta no retornó resultados. NO hagas más consultas. Responde AHORA al usuario que no hay datos disponibles para su pregunta."
                                     else:
+                                        empty_results_count = 0
                                         content = json.dumps(data, ensure_ascii=False)
 
                                     tool_results.append({
@@ -147,6 +149,14 @@ class AIAssistantMCP:
 
                     # Add tool results to conversation
                     messages.append({"role": "user", "content": tool_results})
+
+                    # If empty results, stop immediately
+                    if empty_results_count >= 1:
+                        return {
+                            "success": True,
+                            "response": "No se encontraron datos para tu pregunta en este periodo.",
+                            "sql_queries": executed_queries
+                        }
 
                 elif response.stop_reason == "end_turn":
                     # Claude finished - extract final answer
