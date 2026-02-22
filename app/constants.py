@@ -191,6 +191,15 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     → Para obtener pedido: JOIN con orders usando order_id
     → Para obtener producto: JOIN con products usando product_id
 
+    TABLE: customer_product_prices (precios personalizados por cliente)
+    ✓ Tiene columnas: id, customer_id, product_id, custom_price, created_at, updated_at
+    ✓ SÍ tiene columnas de FECHA: created_at, updated_at
+    ✓ custom_price = precio personalizado de un producto para un cliente específico
+    ✓ Si un cliente NO tiene registro aquí, usa el precio base de products.price
+    ✓ UniqueConstraint en (customer_id, product_id) - solo un precio por cliente por producto
+    → Para obtener cliente: JOIN con customers usando customer_id
+    → Para obtener producto: JOIN con products usando product_id
+
     ╔══════════════════════════════════════════════════════════════╗
     ║ RELACIONES (CÓMO HACER JOINs)                                ║
     ╚══════════════════════════════════════════════════════════════╝
@@ -234,6 +243,20 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     10. order_refunds → products:
     FROM order_refunds orf JOIN products p ON orf.product_id = p.id
     Úsalo cuando: Necesites nombre del producto devuelto
+
+    11. customer_product_prices → customers:
+    FROM customer_product_prices cpp JOIN customers c ON cpp.customer_id = c.id
+    Úsalo cuando: Necesites el nombre del cliente con precio personalizado
+
+    12. customer_product_prices → products:
+    FROM customer_product_prices cpp JOIN products p ON cpp.product_id = p.id
+    Úsalo cuando: Necesites el nombre del producto con precio personalizado
+
+    13. Precio efectivo de un producto para un cliente (base o personalizado):
+    SELECT p.name, COALESCE(cpp.custom_price, p.price) as precio_efectivo
+    FROM products p
+    LEFT JOIN customer_product_prices cpp ON p.id = cpp.product_id AND cpp.customer_id = ?
+    Úsalo cuando: Necesites saber el precio que paga un cliente específico
 
     ╔══════════════════════════════════════════════════════════════╗
     ║ SINTAXIS SQLite PARA FECHAS                                  ║

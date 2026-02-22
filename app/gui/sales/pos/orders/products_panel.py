@@ -1,5 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from app.data.providers.customer_prices import customer_price_provider
 
 
 class ProductsPanel(ttk.Labelframe):
@@ -9,6 +10,8 @@ class ProductsPanel(ttk.Labelframe):
         self.on_product_added = on_product_added
         self.products_list = []
         self.product_widgets = {}
+        self.customer_id = None
+        self.custom_prices = {}
 
         self.setup_ui()
 
@@ -56,13 +59,17 @@ class ProductsPanel(ttk.Labelframe):
     def load(self, products):
         self.products_list = products
 
-    def show_for_customer(self, customer_name):
+    def show_for_customer(self, customer_name, customer_id):
+        self.customer_id = customer_id
+        self.custom_prices = customer_price_provider.get_prices_for_customer(customer_id)
         self.config(text=f"  Productos para: {customer_name}  ")
         self.no_customer_label.pack_forget()
         self.content_frame.pack(fill=BOTH, expand=YES)
         self._display_products()
 
     def hide_products(self):
+        self.customer_id = None
+        self.custom_prices = {}
         self.config(text="  Productos - Seleccione un cliente  ")
         self.content_frame.pack_forget()
         self.no_customer_label.pack(expand=YES)
@@ -77,6 +84,9 @@ class ProductsPanel(ttk.Labelframe):
             self._create_card(product_id, icon, name, default_price)
 
     def _create_card(self, product_id, icon, name, default_price):
+        custom_price = self.custom_prices.get(product_id)
+        display_price = custom_price if custom_price is not None else default_price
+
         card = ttk.Frame(self.inner_frame, bootstyle="light", relief="solid", borderwidth=1)
         card.pack(fill=X, pady=4, padx=2)
 
@@ -105,8 +115,19 @@ class ProductsPanel(ttk.Labelframe):
 
         ttk.Label(price_frame, text="Precio: $").pack(side=LEFT)
 
-        price_var = ttk.StringVar(value=str(default_price))
-        ttk.Entry(price_frame, textvariable=price_var, width=8, font=("Arial", 11)).pack(side=LEFT)
+        price_var = ttk.StringVar(value=str(display_price))
+        price_entry = ttk.Entry(price_frame, textvariable=price_var, width=8, font=("Arial", 11), state="readonly")
+        price_entry.pack(side=LEFT)
+
+        # Edit/Save price button
+        edit_btn = ttk.Button(
+            price_frame,
+            text="✏️",
+            width=3,
+            bootstyle="secondary-outline",
+            command=lambda: self._toggle_edit(product_id)
+        )
+        edit_btn.pack(side=LEFT, padx=(5, 0))
 
         qty_frame = ttk.Frame(controls_row)
         qty_frame.pack(side=LEFT, padx=(20, 0))
@@ -126,8 +147,40 @@ class ProductsPanel(ttk.Labelframe):
         self.product_widgets[product_id] = {
             'price_var': price_var,
             'qty_var': qty_var,
-            'default_price': default_price
+            'default_price': default_price,
+            'price_entry': price_entry,
+            'edit_btn': edit_btn,
+            'editing': False
         }
+
+    def _toggle_edit(self, product_id):
+        widget = self.product_widgets.get(product_id)
+        if not widget:
+            return
+
+        if not widget['editing']:
+            # Enter edit mode
+            widget['price_entry'].configure(state="normal")
+            widget['edit_btn'].configure(text="✅", bootstyle="success")
+            widget['editing'] = True
+        else:
+            # Save and exit edit mode
+            try:
+                new_price = float(widget['price_var'].get())
+                if new_price > 0 and self.customer_id:
+                    customer_price_provider.save_price(
+                        self.customer_id, product_id, new_price
+                    )
+                    self.custom_prices[product_id] = new_price
+            except ValueError:
+                # Restore previous price on invalid input
+                custom = self.custom_prices.get(product_id)
+                restore_price = custom if custom is not None else widget['default_price']
+                widget['price_var'].set(str(restore_price))
+
+            widget['price_entry'].configure(state="readonly")
+            widget['edit_btn'].configure(text="✏️", bootstyle="secondary-outline")
+            widget['editing'] = False
 
     def _on_mousewheel(self, event):
         if event.num == 4 or event.delta > 0:

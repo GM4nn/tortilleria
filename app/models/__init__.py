@@ -7,5 +7,6 @@ from .supplies import Supply, SupplyPurchase
 from .orders import Order, OrderDetail
 from .order_refund import OrderRefund
 from .ia import IAConfig
+from .customer_product_price import CustomerProductPrice
 
-__all__ = ['Product', 'Customer', 'Sale', 'SaleDetail', 'Supplier', 'Supply', 'SupplyPurchase', 'Order', 'OrderDetail', 'OrderRefund', 'IAConfig']
+__all__ = ['Product', 'Customer', 'Sale', 'SaleDetail', 'Supplier', 'Supply', 'SupplyPurchase', 'Order', 'OrderDetail', 'OrderRefund', 'IAConfig', 'CustomerProductPrice']

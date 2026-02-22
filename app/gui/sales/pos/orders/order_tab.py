@@ -55,7 +55,7 @@ class OrderTab(ttk.Frame):
         self.selected_customer = customer
         self.customers_panel.set_selected(customer)
         self.summary_panel.set_customer(customer.customer_name)
-        self.products_panel.show_for_customer(customer.customer_name)
+        self.products_panel.show_for_customer(customer.customer_name, customer.id)
         self._update_save_state()
 
     def add_to_order(self, product_id, name, price_var, qty_var):
@@ -67,11 +67,11 @@ class OrderTab(ttk.Frame):
                 mb.showwarning("Error", "El precio y cantidad deben ser mayores a 0")
                 return
 
-            # Buscar si ya existe en el pedido
+            # Buscar si ya existe en el pedido, reemplazar cantidad
             for item in self.order_items:
                 if item['id'] == product_id and item['price'] == price:
-                    item['quantity'] += quantity
-                    item['subtotal'] = item['quantity'] * item['price']
+                    item['quantity'] = quantity
+                    item['subtotal'] = quantity * item['price']
                     self._refresh_summary()
                     return
 
