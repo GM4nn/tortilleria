@@ -191,6 +191,15 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     → Para obtener pedido: JOIN con orders usando order_id
     → Para obtener producto: JOIN con products usando product_id
 
+    TABLE: cash_cuts (cortes de caja)
+    ✓ Tiene columnas: id, opened_at, closed_at, sales_count, orders_count, sales_total, orders_total, expected_total, declared_cash, declared_card, declared_transfer, declared_total, difference, notes
+    ✓ SÍ tiene columnas de FECHA: opened_at, closed_at
+    ✓ opened_at = inicio del periodo (fecha del corte anterior o inicio de operaciones)
+    ✓ closed_at = fecha en que se registró el corte
+    ✓ expected_total = sales_total + orders_total (lo que debería haber en caja)
+    ✓ declared_total = declared_cash + declared_card + declared_transfer (lo que el usuario declaró)
+    ✓ difference = declared_total - expected_total (positivo = sobrante, negativo = faltante)
+
     TABLE: customer_product_prices (precios personalizados por cliente)
     ✓ Tiene columnas: id, customer_id, product_id, custom_price, created_at, updated_at
     ✓ SÍ tiene columnas de FECHA: created_at, updated_at
