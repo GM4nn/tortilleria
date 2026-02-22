@@ -65,7 +65,7 @@ Solo existe una tabla para compras: `supply_purchases`
 | `app/data/providers/supplies.py` | CRUD de compras, calculo de stock |
 | `app/gui/supplies/detail/history/purchase_form/consumption_inputs.py` | Input de "Cuanto Sobro" + consumido auto-calculado |
 | `app/gui/supplies/detail/history/purchase_form/content.py` | Logica de guardado, pasa `remaining` al provider |
-| `app/gui/supplies/detail/periods/period_cards.py` | Tarjetas de periodos, deriva consumo entre compras consecutivas |
+| `app/gui/supplies/detail/periods/period_table.py` | Tabla de periodos, deriva consumo entre compras consecutivas |
 | `app/gui/supplies/detail/periods/current_period_summary.py` | Resumen del periodo actual (2 compras mas recientes) |
 | `app/gui/reports/supplies/stock_status_section.py` | Reporte de stock actual por insumo |
 | `app/gui/supplies/detail/history/historic_table.py` | Tabla de historial con columna "Sobro" |

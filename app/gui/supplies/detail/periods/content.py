@@ -2,7 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
 from app.gui.supplies.detail.periods.current_period_summary import CurrentPeriodSummary
-from app.gui.supplies.detail.periods.period_cards import PeriodCards
+from app.gui.supplies.detail.periods.period_table import PeriodTable
 
 
 class PeriodsContent(ttk.Frame):
@@ -18,5 +18,5 @@ class PeriodsContent(ttk.Frame):
         self.summary = CurrentPeriodSummary(self, self.supply_data)
         self.summary.pack(fill=X, pady=(0, 5))
 
-        self.cards = PeriodCards(self, self.supply_data['id'])
+        self.cards = PeriodTable(self, self.supply_data['id'])
         self.cards.pack(fill=BOTH, expand=YES)

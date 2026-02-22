@@ -150,9 +150,20 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     ✓ Tiene columnas: id, supplier_name, contact_name, phone, email, address, city, product_type, notes, created_at, updated_at, active
     ✓ SÍ tiene columnas de FECHA: created_at, updated_at
 
-    TABLE: supplies
-    ✓ Tiene columnas: id, supply_name, supplier_id, quantity, unit, unit_price, total_price, purchase_date, notes, created_at, updated_at
+    TABLE: supplies (catálogo de insumos)
+    ✓ Tiene columnas: id, supply_name, supplier_id, created_at, updated_at
+    ✗ NO tiene columna de fecha de compra (es solo un catálogo)
+    → Cada insumo (Maíz, Cal, Harina, etc.) con su proveedor principal
+    → Para obtener compras: JOIN con supply_purchases usando supplies.id = supply_purchases.supply_id
+    → Para obtener proveedor: JOIN con suppliers usando supplier_id
+
+    TABLE: supply_purchases (compras de insumos)
+    ✓ Tiene columnas: id, supply_id, supplier_id, purchase_date, quantity, unit, unit_price, total_price, remaining, notes, created_at, updated_at
     ✓ SÍ tiene columna de FECHA: purchase_date
+    ✓ remaining = lo que sobró del periodo anterior (0 en la primera compra)
+    ✓ Stock actual de un insumo = remaining + quantity de la última compra
+    ✓ Consumo derivado entre 2 compras consecutivas = (prev.remaining + prev.quantity) - current.remaining
+    → Para obtener nombre del insumo: JOIN con supplies usando supply_id
     → Para obtener proveedor: JOIN con suppliers usando supplier_id
 
     TABLE: orders
@@ -188,27 +199,35 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     FROM sales_detail sd JOIN products p ON sd.product_id = p.id
     Úsalo cuando: Necesites nombre o precio del producto
 
-    3. supplies → suppliers:
-    FROM supplies s JOIN suppliers sup ON s.supplier_id = sup.id
-    Úsalo cuando: Necesites información del proveedor
+    3. supply_purchases → supplies:
+    FROM supply_purchases sp JOIN supplies s ON sp.supply_id = s.id
+    Úsalo cuando: Necesites el nombre del insumo de una compra
 
-    4. orders → customers:
+    4. supply_purchases → suppliers:
+    FROM supply_purchases sp JOIN suppliers sup ON sp.supplier_id = sup.id
+    Úsalo cuando: Necesites el proveedor de una compra específica
+
+    5. supplies → suppliers:
+    FROM supplies s JOIN suppliers sup ON s.supplier_id = sup.id
+    Úsalo cuando: Necesites el proveedor principal de un insumo
+
+    6. orders → customers:
     FROM orders o JOIN customers c ON o.customer_id = c.id
     Úsalo cuando: Necesites nombre del cliente de un pedido
 
-    5. order_details → orders:
+    7. order_details → orders:
     FROM order_details od JOIN orders o ON od.order_id = o.id
     Úsalo cuando: Necesites la fecha o status de un pedido
 
-    6. order_details → products:
+    8. order_details → products:
     FROM order_details od JOIN products p ON od.product_id = p.id
     Úsalo cuando: Necesites nombre o precio del producto en un pedido
 
-    7. order_refunds → orders:
+    9. order_refunds → orders:
     FROM order_refunds orf JOIN orders o ON orf.order_id = o.id
     Úsalo cuando: Necesites info del pedido de una devolución
 
-    8. order_refunds → products:
+    10. order_refunds → products:
     FROM order_refunds orf JOIN products p ON orf.product_id = p.id
     Úsalo cuando: Necesites nombre del producto devuelto
 
@@ -246,9 +265,9 @@ AI_ASSISTANT_SYSTEM_PROMPT = f"""
 
     EJEMPLOS DE SQL CORRECTA:
 
-    Ejemplo 1 - Tabla CON fecha (supplies tiene purchase_date):
+    Ejemplo 1 - Tabla CON fecha (supply_purchases tiene purchase_date):
     Pregunta: "¿Cuánto gasté en insumos este mes?"
-    SQL: SELECT SUM(total_price) FROM supplies WHERE strftime('%Y-%m', purchase_date) = strftime('%Y-%m', 'now')
+    SQL: SELECT SUM(total_price) FROM supply_purchases WHERE strftime('%Y-%m', purchase_date) = strftime('%Y-%m', 'now')
 
     Ejemplo 2 - Tabla SIN fecha (sales_detail NO tiene fecha, pero sales SÍ):
     Pregunta: "¿Cuánto de tortilla vendí este mes?"
@@ -263,11 +282,11 @@ AI_ASSISTANT_SYSTEM_PROMPT = f"""
     Pregunta: "¿Cuánto vendí este mes?"
     SQL: SELECT SUM(total) FROM sales WHERE strftime('%Y-%m', date) = strftime('%Y-%m', 'now')
 
-    Ejemplo 4 - Relación indirecta (supplies → supplier_id → suppliers):
+    Ejemplo 4 - Relación (supply_purchases → suppliers):
     Pregunta: "¿Qué proveedor me vende más barato?"
-    SQL: SELECT sup.supplier_name, AVG(s.unit_price) as promedio
-        FROM supplies s
-        JOIN suppliers sup ON s.supplier_id = sup.id
+    SQL: SELECT sup.supplier_name, AVG(sp.unit_price) as promedio
+        FROM supply_purchases sp
+        JOIN suppliers sup ON sp.supplier_id = sup.id
         GROUP BY sup.id
         ORDER BY promedio ASC
         LIMIT 1

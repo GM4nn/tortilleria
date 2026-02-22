@@ -22,7 +22,7 @@ COLUMNS = [
 ]
 
 
-class PeriodCards(ttk.Frame):
+class PeriodTable(ttk.Frame):
     """Tabla de periodos de consumo con paginacion server-side"""
 
     def __init__(self, parent, supply_id):
