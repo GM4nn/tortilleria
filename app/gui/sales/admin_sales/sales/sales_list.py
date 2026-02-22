@@ -109,7 +109,7 @@ class SalesList(ttk.Frame):
 
     def setup_detail_panel(self, parent):
         self.detail_panel = SaleDetail(parent)
-        self.detail_panel.pack(side=RIGHT, fill=BOTH, expand=YES)
+        self.detail_panel.pack(side=RIGHT, fill=BOTH)
 
     def _fetch_sales_page(self, offset, limit):
         sales = sale_provider.get_all(offset, limit, self._filters)
