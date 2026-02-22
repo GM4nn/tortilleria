@@ -1,4 +1,5 @@
 
+import re
 from sqlalchemy import text
 from typing import Any, Dict
 from app.data.database import SessionLocal
@@ -17,17 +18,23 @@ class DatabaseTool:
         Validate SQL query for security
         Returns (is_valid, error_message)
         """
-    
+
         sql_upper = sql.upper().strip()
 
         # Only allow SELECT
         if not sql_upper.startswith('SELECT'):
             return False, "Solo se permiten consultas SELECT"
 
-        # Block dangerous keywords
+        # Block dangerous keywords (whole words only for SQL words)
         for keyword in DANGEROUS_KEYWORDS:
-            if keyword in sql_upper:
-                return False, f"Palabra clave peligrosa detectada: {keyword}"
+            if keyword.isalpha():
+                # SQL words: match whole word only (CREATE != CREATED_AT)
+                if re.search(r'\b' + keyword + r'\b', sql_upper):
+                    return False, f"Palabra clave peligrosa detectada: {keyword}"
+            else:
+                # Special chars (--  ;--  /*  */): match as substring
+                if keyword in sql_upper:
+                    return False, f"Palabra clave peligrosa detectada: {keyword}"
 
         # Must have FROM clause
         if 'FROM' not in sql_upper:
