@@ -4,9 +4,9 @@ BestSuppliersSection - Ranking de proveedores por precio promedio (queries corre
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from ttkbootstrap.tableview import Tableview
 from sqlalchemy import func
 from app.models import Supplier, SupplyPurchase
-from .supplier_products_dialog import SupplierProductsDialog
 
 
 class BestSuppliersSection:
@@ -38,28 +38,38 @@ class BestSuppliersSection:
             tab.create_empty_state(section, "No hay proveedores con compras registradas")
             return
 
-        # Header
-        header_frame = ttk.Frame(section)
-        header_frame.pack(fill=X, pady=(0, 5))
-        for text, w in [("Proveedor", 22), ("Tipo", 14), ("Precio Prom.", 14), ("Compras", 10), ("Total", 14), ("Acciones", 15)]:
-            ttk.Label(header_frame, text=text, font=("Segoe UI", 10, "bold"), width=w).pack(side=LEFT, padx=5)
+        columns = [
+            {"text": "#", "stretch": False, "width": 50},
+            {"text": "Proveedor", "stretch": True},
+            {"text": "Tipo", "stretch": False, "width": 130},
+            {"text": "Precio Prom.", "stretch": False, "width": 120},
+            {"text": "Compras", "stretch": False, "width": 90},
+            {"text": "Total Gastado", "stretch": False, "width": 130},
+        ]
 
+        rows = []
         for i, s in enumerate(suppliers_data):
-            row_frame = ttk.Frame(section)
-            row_frame.pack(fill=X, pady=2)
+            badge = " (Mas Economico)" if i == 0 else ""
+            rows.append([
+                i + 1,
+                f"{s.supplier_name}{badge}",
+                s.product_type or "N/A",
+                f"${s.avg_price:,.2f}",
+                s.purchases_count,
+                f"${s.total_spent:,.2f}",
+            ])
 
-            badge = " ✅ Mas Economico" if i == 0 else ""
-            name_color = "#28a745" if i == 0 else "#212529"
-            font_weight = "bold" if i == 0 else "normal"
+        table_frame = ttk.Frame(section)
+        table_frame.pack(fill=BOTH, expand=YES)
 
-            ttk.Label(row_frame, text=f"{s.supplier_name}{badge}", width=22, font=("Segoe UI", 10, font_weight), foreground=name_color).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=s.product_type or "N/A", width=14).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=f"${s.avg_price:,.2f}", width=14, foreground=name_color).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=str(s.purchases_count), width=10).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=f"${s.total_spent:,.2f}", width=14, foreground="#28a745", font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=5)
-
-            ttk.Button(
-                row_frame, text="👁️ Ver Compras",
-                bootstyle="outline-success", width=15,
-                command=lambda sid=s.id, sname=s.supplier_name: SupplierProductsDialog.show(tab, sid, sname)
-            ).pack(side=LEFT, padx=5)
+        table = Tableview(
+            master=table_frame,
+            coldata=columns,
+            rowdata=rows,
+            paginated=False,
+            searchable=False,
+            bootstyle=SUCCESS,
+            height=min(len(rows), 15),
+        )
+        table.pack(fill=BOTH, expand=YES)
+        table.view.configure(selectmode="none")

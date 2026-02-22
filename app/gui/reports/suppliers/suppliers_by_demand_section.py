@@ -2,6 +2,9 @@
 SuppliersByDemandSection - Ranking por demanda + cards comparativos
 """
 
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+from ttkbootstrap.tableview import Tableview
 from sqlalchemy import func
 from app.models import Supplier, SupplyPurchase
 
@@ -33,17 +36,38 @@ class SuppliersByDemandSection:
             tab.create_empty_state(section, "No hay datos de proveedores")
             return
 
-        headers = [("Proveedor", 22), ("Tipo", 14), ("Compras", 12), ("Total Comprado", 18)]
+        columns = [
+            {"text": "#", "stretch": False, "width": 50},
+            {"text": "Proveedor", "stretch": True},
+            {"text": "Tipo", "stretch": False, "width": 130},
+            {"text": "Compras", "stretch": False, "width": 90},
+            {"text": "Total Comprado", "stretch": False, "width": 140},
+        ]
+
         rows = []
-        for s in suppliers_demand:
+        for i, s in enumerate(suppliers_demand):
             rows.append([
+                i + 1,
                 s.supplier_name,
                 s.product_type or "N/A",
-                str(s.purchases),
-                f"${s.total_purchased:,.2f}"
+                s.purchases,
+                f"${s.total_purchased:,.2f}",
             ])
 
-        tab.create_table(section, headers, rows, money_cols={3})
+        table_frame = ttk.Frame(section)
+        table_frame.pack(fill=BOTH, expand=YES)
+
+        table = Tableview(
+            master=table_frame,
+            coldata=columns,
+            rowdata=rows,
+            paginated=False,
+            searchable=False,
+            bootstyle=SUCCESS,
+            height=min(len(rows), 15),
+        )
+        table.pack(fill=BOTH, expand=YES)
+        table.view.configure(selectmode="none")
 
         # Highlight cards
         most = suppliers_demand[0]

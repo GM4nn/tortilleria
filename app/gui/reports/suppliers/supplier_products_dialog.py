@@ -4,6 +4,7 @@ SupplierProductsDialog - Popup de compras por proveedor (queries corregidas)
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from ttkbootstrap.tableview import Tableview
 from app.data.database import SessionLocal
 from app.models import Supply, SupplyPurchase
 
@@ -18,7 +19,7 @@ class SupplierProductsDialog:
         title_frame = ttk.Frame(dialog, padding=20)
         title_frame.pack(fill=X)
         ttk.Label(
-            title_frame, text=f"history de compras a {supplier_name}",
+            title_frame, text=f"Historial de compras a {supplier_name}",
             font=("Segoe UI", 16, "bold")
         ).pack(anchor=W)
 
@@ -42,34 +43,38 @@ class SupplierProductsDialog:
             ).all()
 
             if purchases:
-                canvas = ttk.Canvas(products_frame, highlightthickness=0)
-                scrollbar = ttk.Scrollbar(products_frame, orient=VERTICAL, command=canvas.yview)
-                scrollable = ttk.Frame(canvas)
+                columns = [
+                    {"text": "Insumo", "stretch": True},
+                    {"text": "Fecha", "stretch": False, "width": 100},
+                    {"text": "Cantidad", "stretch": False, "width": 90},
+                    {"text": "Unidad", "stretch": False, "width": 80},
+                    {"text": "Precio Unit.", "stretch": False, "width": 110},
+                    {"text": "Total", "stretch": False, "width": 110},
+                ]
 
-                scrollable.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-                canvas.create_window((0, 0), window=scrollable, anchor="nw")
-                canvas.configure(yscrollcommand=scrollbar.set)
-
-                canvas.pack(side=LEFT, fill=BOTH, expand=True)
-                scrollbar.pack(side=RIGHT, fill=Y)
-
-                header = ttk.Frame(scrollable)
-                header.pack(fill=X, pady=(0, 10))
-                for text, w in [("Insumo", 18), ("Fecha", 12), ("Cantidad", 12), ("Unidad", 10), ("Precio Unit.", 12), ("Total", 12)]:
-                    ttk.Label(header, text=text, font=("Segoe UI", 10, "bold"), width=w).pack(side=LEFT, padx=5)
-
+                rows = []
                 for p in purchases:
-                    row = ttk.Frame(scrollable)
-                    row.pack(fill=X, pady=2)
-
                     date_str = p.purchase_date.strftime("%Y-%m-%d") if hasattr(p.purchase_date, 'strftime') else str(p.purchase_date)
+                    rows.append([
+                        p.supply_name,
+                        date_str,
+                        f"{p.quantity:.2f}",
+                        p.unit,
+                        f"${p.unit_price:,.2f}",
+                        f"${p.total_price:,.2f}",
+                    ])
 
-                    ttk.Label(row, text=p.supply_name, width=18).pack(side=LEFT, padx=5)
-                    ttk.Label(row, text=date_str, width=12).pack(side=LEFT, padx=5)
-                    ttk.Label(row, text=f"{p.quantity:.2f}", width=12).pack(side=LEFT, padx=5)
-                    ttk.Label(row, text=p.unit, width=10).pack(side=LEFT, padx=5)
-                    ttk.Label(row, text=f"${p.unit_price:,.2f}", width=12).pack(side=LEFT, padx=5)
-                    ttk.Label(row, text=f"${p.total_price:,.2f}", width=12, foreground="#28a745", font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=5)
+                table = Tableview(
+                    master=products_frame,
+                    coldata=columns,
+                    rowdata=rows,
+                    paginated=False,
+                    searchable=False,
+                    bootstyle=SUCCESS,
+                    height=min(len(rows), 18),
+                )
+                table.pack(fill=BOTH, expand=YES)
+                table.view.configure(selectmode="none")
             else:
                 ttk.Label(
                     products_frame, text="Este proveedor no tiene compras registradas",

@@ -5,6 +5,7 @@ Replica la logica de SupplyProvider._calculate_current_stock()
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from ttkbootstrap.tableview import Tableview
 from sqlalchemy import func
 from app.models import Supply, SupplyPurchase, SupplyConsumption, Supplier
 
@@ -25,12 +26,15 @@ class StockStatusSection:
             tab.create_empty_state(section, "No hay insumos registrados")
             return
 
-        # Header
-        header_frame = ttk.Frame(section)
-        header_frame.pack(fill=X, pady=(0, 5))
-        for text, w in [("Insumo", 18), ("Proveedor", 18), ("Stock Actual", 14), ("Unidad", 10), ("Ultima Compra", 14)]:
-            ttk.Label(header_frame, text=text, font=("Segoe UI", 10, "bold"), width=w).pack(side=LEFT, padx=5)
+        columns = [
+            {"text": "Insumo", "stretch": True},
+            {"text": "Proveedor", "stretch": True},
+            {"text": "Stock Actual", "stretch": False, "width": 120},
+            {"text": "Unidad", "stretch": False, "width": 90},
+            {"text": "Ultima Compra", "stretch": False, "width": 130},
+        ]
 
+        rows = []
         for supply in supplies:
             # Calculate current stock (same logic as SupplyProvider._calculate_current_stock)
             last_consumption = db.query(SupplyConsumption).filter(
@@ -62,19 +66,25 @@ class StockStatusSection:
                 d = last_purchase.purchase_date
                 last_date = d.strftime("%Y-%m-%d") if hasattr(d, 'strftime') else str(d)
 
-            # Color based on stock level
-            if current_stock <= 0:
-                color = "#dc3545"  # Red
-            elif current_stock < 10:
-                color = "#ffc107"  # Yellow
-            else:
-                color = "#28a745"  # Green
+            rows.append([
+                supply.supply_name,
+                supply.supplier.supplier_name if supply.supplier else "N/A",
+                f"{current_stock:.2f}",
+                unit,
+                last_date,
+            ])
 
-            row_frame = ttk.Frame(section)
-            row_frame.pack(fill=X, pady=2)
+        table_frame = ttk.Frame(section)
+        table_frame.pack(fill=BOTH, expand=YES)
 
-            ttk.Label(row_frame, text=supply.supply_name, width=18).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=supply.supplier.supplier_name if supply.supplier else "N/A", width=18).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=f"{current_stock:.2f}", width=14, foreground=color, font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=unit, width=10).pack(side=LEFT, padx=5)
-            ttk.Label(row_frame, text=last_date, width=14).pack(side=LEFT, padx=5)
+        table = Tableview(
+            master=table_frame,
+            coldata=columns,
+            rowdata=rows,
+            paginated=False,
+            searchable=False,
+            bootstyle=WARNING,
+            height=min(len(rows), 15),
+        )
+        table.pack(fill=BOTH, expand=YES)
+        table.view.configure(selectmode="none")

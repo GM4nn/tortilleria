@@ -4,6 +4,7 @@ CustomerProductsDialog - Popup de detalle de productos por cliente
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from ttkbootstrap.tableview import Tableview
 from sqlalchemy import func
 from app.data.database import SessionLocal
 from app.models import Product, Order, OrderDetail
@@ -21,19 +22,8 @@ class CustomerProductsDialog:
             font=("Segoe UI", 14, "bold")
         ).pack(pady=20, padx=20)
 
-        canvas = ttk.Canvas(dialog, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(dialog, orient=VERTICAL, command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        canvas.pack(side=LEFT, fill=BOTH, expand=True, padx=20, pady=(0, 20))
-        scrollbar.pack(side=RIGHT, fill=Y, pady=(0, 20))
+        products_frame = ttk.Frame(dialog, padding=(20, 0, 20, 20))
+        products_frame.pack(fill=BOTH, expand=True)
 
         with SessionLocal() as db:
             products = db.query(
@@ -54,25 +44,36 @@ class CustomerProductsDialog:
             ).all()
 
             if products:
-                # Header
-                header = ttk.Frame(scrollable_frame)
-                header.pack(fill=X, pady=(0, 10))
-                for text, w in [("Producto", 25), ("Cantidad", 15), ("Veces", 10), ("Total", 15)]:
-                    ttk.Label(header, text=text, font=("Segoe UI", 10, "bold"), width=w).pack(side=LEFT, padx=5)
+                columns = [
+                    {"text": "Producto", "stretch": True},
+                    {"text": "Cantidad", "stretch": False, "width": 100},
+                    {"text": "Veces", "stretch": False, "width": 80},
+                    {"text": "Total", "stretch": False, "width": 120},
+                ]
 
+                rows = []
                 for product in products:
-                    row = ttk.Frame(scrollable_frame, relief="solid", borderwidth=1)
-                    row.pack(fill=X, pady=2)
-                    ttk.Label(row, text=product.name, width=25).pack(side=LEFT, padx=5, pady=5)
-                    ttk.Label(row, text=f"{product.quantity:.0f}", width=15).pack(side=LEFT, padx=5, pady=5)
-                    ttk.Label(row, text=str(product.times_ordered), width=10).pack(side=LEFT, padx=5, pady=5)
-                    ttk.Label(
-                        row, text=f"${product.total:,.2f}", width=15,
-                        foreground="#28a745", font=("Segoe UI", 10, "bold")
-                    ).pack(side=LEFT, padx=5, pady=5)
+                    rows.append([
+                        product.name,
+                        f"{product.quantity:.0f}",
+                        product.times_ordered,
+                        f"${product.total:,.2f}",
+                    ])
+
+                table = Tableview(
+                    master=products_frame,
+                    coldata=columns,
+                    rowdata=rows,
+                    paginated=False,
+                    searchable=False,
+                    bootstyle=INFO,
+                    height=min(len(rows), 18),
+                )
+                table.pack(fill=BOTH, expand=YES)
+                table.view.configure(selectmode="none")
             else:
                 ttk.Label(
-                    scrollable_frame, text="No hay productos pedidos por este cliente",
+                    products_frame, text="No hay productos pedidos por este cliente",
                     foreground="#6c757d", font=("Segoe UI", 11, "italic")
                 ).pack(pady=50)
 

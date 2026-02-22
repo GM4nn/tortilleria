@@ -2,6 +2,9 @@
 TopCustomersSection - Top 5 clientes mas fieles
 """
 
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+from ttkbootstrap.tableview import Tableview
 from sqlalchemy import func
 from app.models import Customer, Order, OrderDetail
 
@@ -47,16 +50,37 @@ class TopCustomersSection:
             ).scalar() or 0
             customer_totals[customer.id] = total
 
-        headers = [("Cliente", 25), ("Categoria", 15), ("Pedidos", 12), ("Productos", 12), ("Total Gastado", 18)]
+        columns = [
+            {"text": "#", "stretch": False, "width": 50},
+            {"text": "Cliente", "stretch": True},
+            {"text": "Categoria", "stretch": False, "width": 120},
+            {"text": "Pedidos", "stretch": False, "width": 90},
+            {"text": "Productos", "stretch": False, "width": 100},
+            {"text": "Total Gastado", "stretch": False, "width": 140},
+        ]
+
         rows = []
         for i, c in enumerate(top_customers):
-            icon = "🏆 " if i == 0 else ""
             rows.append([
-                f"{icon}{c.customer_name}",
+                i + 1,
+                c.customer_name,
                 c.customer_category or "N/A",
-                str(c.orders),
+                c.orders,
                 f"{c.total_products:.0f}",
-                f"${customer_totals[c.id]:,.2f}"
+                f"${customer_totals[c.id]:,.2f}",
             ])
 
-        tab.create_table(section, headers, rows, money_cols={4})
+        table_frame = ttk.Frame(section)
+        table_frame.pack(fill=BOTH, expand=YES)
+
+        table = Tableview(
+            master=table_frame,
+            coldata=columns,
+            rowdata=rows,
+            paginated=False,
+            searchable=False,
+            bootstyle=INFO,
+            height=min(len(rows), 15),
+        )
+        table.pack(fill=BOTH, expand=YES)
+        table.view.configure(selectmode="none")
