@@ -129,6 +129,13 @@ class SupplyGrid(ttk.Frame):
             bootstyle="primary"
         ).pack(side=LEFT)
 
+        ttk.Label(
+            name_frame,
+            text=f"({supply_data.get('unit', '')})",
+            font=("Arial", 10),
+            bootstyle="secondary"
+        ).pack(side=LEFT, padx=(5, 0))
+
         ttk.Button(
             name_frame,
             text="\u270F",

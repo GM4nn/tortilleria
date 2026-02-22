@@ -2,6 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
 from app.data.providers.supplies import supply_provider
+from app.constants import SUPPLY_UNITS
 
 
 class SupplyForm(ttk.Frame):
@@ -72,6 +73,19 @@ class SupplyForm(ttk.Frame):
         self.supplier_combo.pack(fill=X, pady=(0, 10))
         self.load_suppliers()
 
+        # Unidad de medida
+        ttk.Label(form_container, text="Unidad de Medida:*").pack(anchor=W, pady=(5, 2))
+        self.unit_var = ttk.StringVar()
+        self.unit_combo = ttk.Combobox(
+            form_container,
+            textvariable=self.unit_var,
+            state="readonly",
+            values=SUPPLY_UNITS,
+            width=28
+        )
+        self.unit_combo.pack(fill=X, pady=(0, 10))
+        self.unit_combo.current(0)
+
     def setup_gui_actions_buttons(self, form_container):
         # Nota informativa
         info_frame = ttk.Frame(form_container)
@@ -141,11 +155,16 @@ class SupplyForm(ttk.Frame):
             Messagebox.show_error("Debe seleccionar un proveedor", "Error")
             return
 
+        unit = self.unit_var.get()
+        if not unit:
+            Messagebox.show_error("Debe seleccionar una unidad de medida", "Error")
+            return
+
         supplier_id = self.suppliers_dict.get(supplier_name)
 
         if self.selected_supply_id is None:
             # Crear nuevo insumo
-            success, result = self.provider.create_supply(name, supplier_id)
+            success, result = self.provider.create_supply(name, supplier_id, unit)
 
             if success:
                 Messagebox.show_info(f"Insumo creado con ID: {result}", "\u00c9xito")
@@ -157,7 +176,7 @@ class SupplyForm(ttk.Frame):
         else:
             # Actualizar insumo existente
             success, result = self.provider.update_supply(
-                self.selected_supply_id, name, supplier_id
+                self.selected_supply_id, name, supplier_id, unit
             )
 
             if success:
@@ -202,6 +221,7 @@ class SupplyForm(ttk.Frame):
         self.title_label.configure(text="Editar Insumo")
         self.name_var.set(supply_data['supply_name'])
         self.supplier_var.set(supply_data['supplier_name'])
+        self.unit_var.set(supply_data.get('unit', 'kilos'))
 
     def clear_form(self):
         """Clear the form"""
@@ -210,3 +230,4 @@ class SupplyForm(ttk.Frame):
         self.title_label.configure(text="Nuevo Insumo")
         self.name_var.set("")
         self.supplier_var.set("")
+        self.unit_combo.current(0)

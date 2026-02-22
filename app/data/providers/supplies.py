@@ -23,6 +23,7 @@ class SupplyProvider:
                     'supply_name': s.supply_name,
                     'supplier_id': s.supplier_id,
                     'supplier_name': s.supplier.supplier_name if s.supplier else 'N/A',
+                    'unit': s.unit,
                     'created_at': s.created_at,
                     'updated_at': s.updated_at
                 }
@@ -48,6 +49,7 @@ class SupplyProvider:
                     'supply_name': supply.supply_name,
                     'supplier_id': supply.supplier_id,
                     'supplier_name': supply.supplier.supplier_name if supply.supplier else 'N/A',
+                    'unit': supply.unit,
                     'purchases': sorted(
                         [
                             {
@@ -83,14 +85,15 @@ class SupplyProvider:
         finally:
             db.close()
 
-    def create_supply(self, supply_name, supplier_id):
+    def create_supply(self, supply_name, supplier_id, unit):
 
         db = get_db()
 
         try:
             supply = Supply(
                 supply_name=supply_name,
-                supplier_id=supplier_id
+                supplier_id=supplier_id,
+                unit=unit
             )
             db.add(supply)
             db.commit()
@@ -105,7 +108,7 @@ class SupplyProvider:
         finally:
             db.close()
 
-    def update_supply(self, supply_id, supply_name, supplier_id):
+    def update_supply(self, supply_id, supply_name, supplier_id, unit):
 
         db = get_db()
         try:
@@ -113,6 +116,7 @@ class SupplyProvider:
             if supply:
                 supply.supply_name = supply_name
                 supply.supplier_id = supplier_id
+                supply.unit = unit
                 supply.updated_at = mexico_now()
                 db.commit()
                 return True, "Insumo actualizado"
@@ -401,6 +405,7 @@ class SupplyProvider:
                     'supply_name': s.supply_name,
                     'supplier_id': s.supplier_id,
                     'supplier_name': s.supplier.supplier_name if s.supplier else 'N/A',
+                    'unit': s.unit,
                 }
                 for s in supplies
             ]

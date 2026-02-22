@@ -31,7 +31,8 @@ class HistoryContent:
         self.form.set_supply(
             supply_data['id'],
             supply_data['supply_name'],
-            supply_data.get('supplier_id')
+            supply_data.get('supplier_id'),
+            supply_data.get('unit')
         )
 
     def _on_purchase_selected(self, supply_id, supply_name, purchase_data):
@@ -54,5 +55,6 @@ class HistoryContent:
         self.form.set_supply(
             self.supply_data['id'],
             self.supply_data['supply_name'],
-            self.supply_data.get('supplier_id')
+            self.supply_data.get('supplier_id'),
+            self.supply_data.get('unit')
         )

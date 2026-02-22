@@ -109,10 +109,10 @@ class PurchaseForm(ttk.Frame):
         ).pack(fill=X, pady=5)
 
     def _new_purchase(self):
-        sid, sname, sup_id = self.supply_id, self.supply_name, self.suggested_supplier_id
+        sid, sname, sup_id, unit = self.supply_id, self.supply_name, self.suggested_supplier_id, getattr(self, 'supply_unit', None)
         self.clear_form()
         if sid and sname:
-            self.set_supply(sid, sname, sup_id)
+            self.set_supply(sid, sname, sup_id, unit)
         self.purchase_inputs.date_entry.entry.focus()
 
     def _delete_purchase(self):
@@ -136,18 +136,21 @@ class PurchaseForm(ttk.Frame):
             Messagebox.show_error(f"Error al eliminar: {result}", "Error")
 
     def _on_clear(self):
-        sid, sname, sup_id = self.supply_id, self.supply_name, self.suggested_supplier_id
+        sid, sname, sup_id, unit = self.supply_id, self.supply_name, self.suggested_supplier_id, getattr(self, 'supply_unit', None)
         self.clear_form()
         if sid and sname:
-            self.set_supply(sid, sname, sup_id)
+            self.set_supply(sid, sname, sup_id, unit)
 
     # ─── Set supply / Edit mode ───────────────────────────────────
 
-    def set_supply(self, supply_id, supply_name, suggested_supplier_id=None):
+    def set_supply(self, supply_id, supply_name, suggested_supplier_id=None, unit=None):
         self.supply_id = supply_id
         self.supply_name = supply_name
         self.suggested_supplier_id = suggested_supplier_id
+        self.supply_unit = unit
         self.purchase_inputs.supply_label.configure(text=supply_name)
+        if unit:
+            self.purchase_inputs.unit_var.set(unit)
         self.last_purchase_data = None
 
         if suggested_supplier_id:

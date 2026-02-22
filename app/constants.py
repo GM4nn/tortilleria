@@ -102,6 +102,9 @@ CUSTOMER_CATEGORIES = {
     "Tienda": "Tienda"
 }
 
+# SUPPLY UNITS
+SUPPLY_UNITS = ["kilos", "litros", "piezas", "costales", "bultos", "cajas"]
+
 # AI ASSISTANT
 
 DANGEROUS_KEYWORDS = [
@@ -151,7 +154,8 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     ✓ SÍ tiene columnas de FECHA: created_at, updated_at
 
     TABLE: supplies (catálogo de insumos)
-    ✓ Tiene columnas: id, supply_name, supplier_id, created_at, updated_at
+    ✓ Tiene columnas: id, supply_name, supplier_id, unit, created_at, updated_at
+    ✓ unit = unidad de medida del insumo (kilos, litros, piezas, costales, bultos, cajas)
     ✗ NO tiene columna de fecha de compra (es solo un catálogo)
     → Cada insumo (Maíz, Cal, Harina, etc.) con su proveedor principal
     → Para obtener compras: JOIN con supply_purchases usando supplies.id = supply_purchases.supply_id

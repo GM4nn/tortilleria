@@ -56,6 +56,9 @@ class SupplyDetailView(ttk.Frame):
         ttk.Label(header, text=self.supply_data['supply_name'], font=("Arial", 16, "bold")).pack(side=LEFT)
         ttk.Label(header, text="·", font=("Arial", 16), bootstyle="secondary").pack(side=LEFT, padx=10)
         ttk.Label(header, text=self.supply_data['supplier_name'], font=("Arial", 12), bootstyle="secondary").pack(side=LEFT)
+        if self.supply_data.get('unit'):
+            ttk.Label(header, text="·", font=("Arial", 16), bootstyle="secondary").pack(side=LEFT, padx=10)
+            ttk.Label(header, text=self.supply_data['unit'], font=("Arial", 12), bootstyle="info").pack(side=LEFT)
 
     def setup_tabs(self, parent):
         ttk.Separator(parent, orient=HORIZONTAL).pack(fill=X, pady=(0, 8))

@@ -32,14 +32,14 @@ class PurchaseInputs(ttk.Frame):
         self.date_entry.pack(fill=X, pady=(0, 10))
         self._patch_date_entry_position()
 
-        # Unidad
-        ttk.Label(self, text="Unidad:*").pack(anchor=W, pady=(5, 2))
+        # Unidad (auto-filled from supply, read-only)
+        ttk.Label(self, text="Unidad:").pack(anchor=W, pady=(5, 2))
         self.unit_var = ttk.StringVar()
-        self.unit_combo = ttk.Combobox(
+        self.unit_label = ttk.Label(
             self, textvariable=self.unit_var,
-            values=["kilos", "litros", "piezas", "costales", "bultos", "cajas"], width=28
+            font=("Arial", 11, "bold"), bootstyle="info"
         )
-        self.unit_combo.pack(fill=X, pady=(0, 10))
+        self.unit_label.pack(anchor=W, pady=(0, 10))
 
         # Cantidad
         ttk.Label(self, text="Cantidad:*").pack(anchor=W, pady=(5, 2))
