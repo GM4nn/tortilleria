@@ -13,12 +13,12 @@ class ConsumptionInputs(ttk.Frame):
 
     def setup_ui(self):
         ttk.Label(
-            self, text="Registrar Consumo del Periodo",
+            self, text="Consumo del Periodo Anterior",
             font=("Arial", 12, "bold"), bootstyle="warning"
         ).pack(anchor=W, pady=(5, 5))
 
         ttk.Label(
-            self, text="¿Cuanto gastaste desde la ultima compra?",
+            self, text="Ingresa cuanto te sobro del periodo anterior",
             font=("Arial", 9, "italic"), bootstyle="secondary"
         ).pack(anchor=W, pady=(0, 10))
 
@@ -54,37 +54,22 @@ class ConsumptionInputs(ttk.Frame):
         self.breakdown_label = ttk.Label(self.total_available_frame, text="", font=("Arial", 8, "italic"), bootstyle="secondary")
         self.breakdown_label.pack(pady=(2, 0))
 
-        # Cantidad consumida
-        consumed_lf = ttk.Frame(self)
-        consumed_lf.pack(fill=X, pady=(5, 2))
-        ttk.Label(consumed_lf, text="¿Cuanto Gastaste?*", font=("Arial", 10, "bold")).pack(side=LEFT)
-        ttk.Label(consumed_lf, text="(puede incluir lo sobrante)", font=("Arial", 8, "italic"), bootstyle="secondary").pack(side=LEFT, padx=(5, 0))
-
-        self.consumed_var = ttk.StringVar()
-        self.consumed_entry = ttk.Entry(self, textvariable=self.consumed_var, width=30, font=("Arial", 11))
-        self.consumed_entry.pack(fill=X, pady=(0, 10))
-
-        # Cantidad restante
-        remaining_lf = ttk.Frame(self)
-        remaining_lf.pack(fill=X, pady=(5, 2))
-        ttk.Label(remaining_lf, text="¿Cuanto Sobro?*", font=("Arial", 10, "bold")).pack(side=LEFT)
-        ttk.Label(remaining_lf, text="(lo que no usaste)", font=("Arial", 8, "italic"), bootstyle="secondary").pack(side=LEFT, padx=(5, 0))
+        # Cantidad restante (input del usuario)
+        ttk.Label(self, text="¿Cuanto Sobro?*", font=("Arial", 10, "bold")).pack(anchor=W, pady=(5, 2))
 
         self.remaining_var = ttk.StringVar()
         self.remaining_entry = ttk.Entry(self, textvariable=self.remaining_var, width=30, font=("Arial", 11))
-        self.remaining_entry.pack(fill=X, pady=(0, 5))
+        self.remaining_entry.pack(fill=X, pady=(0, 10))
+
+        # Consumido (auto-calculado, solo informativo)
+        self.consumed_label = ttk.Label(self, text="", font=("Arial", 10), bootstyle="secondary")
+        self.consumed_label.pack(anchor=W, pady=(0, 5))
 
         # Validacion en tiempo real
         self.validation_label = ttk.Label(self, text="", font=("Arial", 9), bootstyle="secondary")
         self.validation_label.pack(anchor=W, pady=(0, 10))
 
-        self.consumed_var.trace_add('write', self._validate_real_time)
         self.remaining_var.trace_add('write', self._validate_real_time)
-
-        # Notas de consumo
-        ttk.Label(self, text="Notas de Consumo:").pack(anchor=W, pady=(5, 2))
-        self.consumption_notes_text = ttk.Text(self, height=2, width=30)
-        self.consumption_notes_text.pack(fill=X, pady=(0, 10))
 
     # ─── Validacion ───────────────────────────────────────────────
 
@@ -92,42 +77,39 @@ class ConsumptionInputs(ttk.Frame):
         if not self.last_purchase_data:
             return
         try:
-            consumed = float(self.consumed_var.get() or 0)
-            remaining = float(self.remaining_var.get() or 0)
-
-            if consumed == 0 and remaining == 0:
-                self.validation_label.configure(text="", bootstyle="secondary")
-                return
+            user_remaining = float(self.remaining_var.get() or 0)
 
             last_quantity = self.last_purchase_data['quantity']
-            initial_stock = self.last_purchase_data.get('initial_stock', 0.0)
-            total_available = initial_stock + last_quantity
-            total_accounted = consumed + remaining
-            difference = total_available - total_accounted
+            prev_remaining = self.last_purchase_data.get('remaining', 0.0)
+            total_available = prev_remaining + last_quantity
+            consumed = total_available - user_remaining
 
-            if abs(difference) < 0.01:
+            if user_remaining < 0:
+                self.consumed_label.configure(text="")
+                self.validation_label.configure(text="El restante no puede ser negativo", bootstyle="danger")
+            elif user_remaining > total_available:
+                self.consumed_label.configure(text="")
                 self.validation_label.configure(
-                    text=f"✓ Perfecto: {consumed:.2f} + {remaining:.2f} = {total_available:.2f}",
-                    bootstyle="success"
-                )
-            elif difference > 0:
-                self.validation_label.configure(
-                    text=f"⚠ Faltan {difference:.2f} por asignar (Total: {total_available:.2f})",
-                    bootstyle="warning"
-                )
-            else:
-                self.validation_label.configure(
-                    text=f"✗ Te pasaste por {abs(difference):.2f} (Total: {total_available:.2f})",
+                    text=f"No puede sobrar mas de lo disponible ({total_available:.2f})",
                     bootstyle="danger"
                 )
+            else:
+                self.consumed_label.configure(
+                    text=f"Consumido: {consumed:.2f} ({consumed / total_available * 100:.0f}%)" if total_available > 0 else "",
+                    bootstyle="info"
+                )
+                self.validation_label.configure(
+                    text=f"Gastaste {consumed:.2f} + Sobro {user_remaining:.2f} = {total_available:.2f}",
+                    bootstyle="success"
+                )
         except ValueError:
+            self.consumed_label.configure(text="")
             self.validation_label.configure(text="", bootstyle="secondary")
 
     # ─── Clear ────────────────────────────────────────────────────
 
     def clear(self):
         self.last_purchase_data = None
-        self.consumed_var.set("")
         self.remaining_var.set("")
-        self.consumption_notes_text.delete('1.0', 'end')
+        self.consumed_label.configure(text="")
         self.validation_label.configure(text="", bootstyle="secondary")

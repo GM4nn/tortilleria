@@ -1,8 +1,8 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from ttkbootstrap.tableview import Tableview
+from app.gui.components.server_paginated_table import ServerPaginatedTableview
+from app.data.providers.supplies import supply_provider
 from datetime import datetime
-
 
 MESES = {
     1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
@@ -11,19 +11,34 @@ MESES = {
 
 MESES_INV = {v: k for k, v in MESES.items()}
 
+COLUMNS = [
+    {"text": "Fecha", "stretch": False, "width": 100},
+    {"text": "Proveedor", "stretch": False, "width": 120},
+    {"text": "Cantidad", "stretch": False, "width": 80},
+    {"text": "Unidad", "stretch": False, "width": 70},
+    {"text": "Precio Unit.", "stretch": False, "width": 90},
+    {"text": "Total", "stretch": False, "width": 90},
+    {"text": "Sobro", "stretch": False, "width": 70},
+    {"text": "Notas", "stretch": True, "width": 120}
+]
+
 
 class HistoricTable(ttk.Frame):
-    """Tabla de historial de compras con selección para editar"""
+    """Tabla de historial de compras con paginacion server-side"""
 
-    def __init__(self, parent, supply_data, on_row_click=None):
+    def __init__(self, parent, supply_id, on_row_click=None):
         super().__init__(parent)
-        self.supply_data = supply_data
+        self.supply_id = supply_id
         self.on_row_click = on_row_click
+        self.provider = supply_provider
+        self._current_page_data = []
 
         self.setup_ui()
 
     def setup_ui(self):
-        if not self.supply_data['purchases']:
+        count = self.provider.count_purchases(self.supply_id)
+
+        if count == 0:
             ttk.Label(
                 self,
                 text="No hay compras registradas para este insumo",
@@ -32,45 +47,35 @@ class HistoricTable(ttk.Frame):
             ).pack(pady=20)
             return
 
-        columns = [
-            {"text": "Fecha", "stretch": False, "width": 100},
-            {"text": "Proveedor", "stretch": False, "width": 120},
-            {"text": "Cantidad", "stretch": False, "width": 80},
-            {"text": "Unidad", "stretch": False, "width": 80},
-            {"text": "Precio Unit.", "stretch": False, "width": 100},
-            {"text": "Total", "stretch": False, "width": 100},
-            {"text": "Notas", "stretch": True, "width": 150}
-        ]
-
         table_frame = ttk.Frame(self)
         table_frame.pack(fill=BOTH, expand=YES)
 
-        self.table = Tableview(
+        self.table = ServerPaginatedTableview(
             master=table_frame,
-            coldata=columns,
-            rowdata=[],
-            paginated=True,
+            coldata=COLUMNS,
+            fetch_page=self._fetch_page,
+            count_rows=self._count_rows,
+            pagesize=10,
             searchable=False,
             bootstyle=PRIMARY,
-            pagesize=10,
             height=10
         )
         self.table.pack(fill=BOTH, expand=YES)
         self.table.view.bind('<ButtonRelease-1>', self._on_click)
 
-        self._fill_table()
-
-    def _fill_table(self):
-        self.table.delete_rows()
+    def _fetch_page(self, offset, limit):
+        purchases = self.provider.get_purchases_paginated(self.supply_id, offset, limit)
+        self._current_page_data = purchases
 
         rows = []
-        for purchase in self.supply_data['purchases']:
+        for purchase in purchases:
             if hasattr(purchase['purchase_date'], 'strftime'):
                 fecha = purchase['purchase_date']
                 date_str = f"{fecha.day}/{MESES[fecha.month]}/{fecha.year}"
             else:
                 date_str = str(purchase['purchase_date'])
 
+            remaining = purchase.get('remaining', 0.0)
             rows.append([
                 date_str,
                 purchase.get('supplier_name', 'N/A'),
@@ -78,12 +83,14 @@ class HistoricTable(ttk.Frame):
                 purchase['unit'],
                 f"${purchase['unit_price']:.2f}",
                 f"${purchase['total_price']:.2f}",
+                f"{remaining:.2f}" if remaining > 0 else "-",
                 purchase['notes'] or ""
             ])
 
-        if rows:
-            self.table.insert_rows(0, rows)
-        self.table.load_table_data()
+        return rows
+
+    def _count_rows(self):
+        return self.provider.count_purchases(self.supply_id)
 
     def _on_click(self, event):
         if not self.on_row_click:
@@ -106,6 +113,18 @@ class HistoricTable(ttk.Frame):
             if not row_values:
                 return
 
+            # Buscar en los datos de la pagina actual por indice
+            idx = self.table.view.index(selected_items[0])
+            if idx < len(self._current_page_data):
+                purchase = self._current_page_data[idx]
+                self.on_row_click(
+                    self.supply_id,
+                    None,
+                    purchase
+                )
+                return
+
+            # Fallback: buscar por fecha
             date_str = row_values[0]
             partes = date_str.split('/')
             if len(partes) == 3:
@@ -116,7 +135,7 @@ class HistoricTable(ttk.Frame):
             else:
                 purchase_date = datetime.strptime(date_str, "%d/%m/%Y").date()
 
-            for purchase in self.supply_data['purchases']:
+            for purchase in self._current_page_data:
                 p_date = purchase['purchase_date']
                 if isinstance(p_date, str):
                     p_date = datetime.strptime(p_date, "%Y-%m-%d").date()
@@ -125,8 +144,8 @@ class HistoricTable(ttk.Frame):
 
                 if p_date == purchase_date:
                     self.on_row_click(
-                        self.supply_data['id'],
-                        self.supply_data['supply_name'],
+                        self.supply_id,
+                        None,
                         purchase
                     )
                     break
@@ -134,7 +153,6 @@ class HistoricTable(ttk.Frame):
         except Exception as e:
             print(f"Error selecting purchase: {e}")
 
-    def refresh(self, supply_data):
-        self.supply_data = supply_data
+    def refresh(self):
         if hasattr(self, 'table'):
-            self._fill_table()
+            self.table.refresh()

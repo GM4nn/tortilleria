@@ -13,10 +13,10 @@ class HistoryContent:
         self.supply_data = supply_data
         self.on_form_saved = on_form_saved
 
-        # Tabla de compras (lado izquierdo)
+        # Tabla de compras (lado izquierdo) - paginacion server-side
         self.table = HistoricTable(
             table_parent,
-            supply_data,
+            supply_data['id'],
             on_row_click=self._on_purchase_selected
         )
         self.table.pack(fill=BOTH, expand=YES)
@@ -37,7 +37,7 @@ class HistoryContent:
     def _on_purchase_selected(self, supply_id, supply_name, purchase_data):
         """Al hacer click en una fila, cargar en el form para editar"""
         self.form.clear_form()
-        self.form.set_edit_mode(supply_id, supply_name, purchase_data)
+        self.form.set_edit_mode(supply_id, self.supply_data['supply_name'], purchase_data)
 
     def _on_form_closed(self):
         """Al guardar/cancelar, refrescar tabla y resetear form"""
@@ -46,7 +46,7 @@ class HistoryContent:
 
     def refresh(self, supply_data):
         self.supply_data = supply_data
-        self.table.refresh(supply_data)
+        self.table.refresh()
 
     def reset_form(self):
         """Resetear form a modo nueva compra"""

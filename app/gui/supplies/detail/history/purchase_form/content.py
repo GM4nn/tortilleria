@@ -133,7 +133,7 @@ class PurchaseForm(ttk.Frame):
         ci.last_purchase_date_label.configure(text=last_date.strftime("%d/%m/%Y"))
         ci.last_purchase_quantity_label.configure(text=f"({last_purchase['quantity']:.2f} {last_purchase['unit']})")
 
-        previous_stock = last_purchase.get('initial_stock', 0.0)
+        previous_stock = last_purchase.get('remaining', 0.0)
 
         if previous_stock > 0:
             ci.previous_stock_label.configure(text=f"{previous_stock:.2f} {last_purchase['unit']}")
@@ -206,14 +206,12 @@ class PurchaseForm(ttk.Frame):
     # ─── Associated consumption ───────────────────────────────────
 
     def _load_associated_consumption(self, supply_id, purchase_data):
-        supply_full = self.provider.get_supply_by_id(supply_id)
-        if not supply_full:
+        """Cargar consumo asociado buscando la compra previa"""
+        purchases = self.provider.get_purchases_by_supply(supply_id)
+        if not purchases:
             self.consumption_inputs.pack_forget()
             self.is_first_purchase = True
             return
-
-        purchases = supply_full['purchases']
-        consumptions = supply_full['consumptions']
 
         p_date = purchase_data['purchase_date']
         if isinstance(p_date, str):
@@ -221,7 +219,9 @@ class PurchaseForm(ttk.Frame):
         elif isinstance(p_date, datetime):
             p_date = p_date.date()
 
+        # Buscar la compra previa a la que estamos editando
         prev_purchase = None
+        prev_prev_purchase = None
         for i, p in enumerate(purchases):
             pd = p['purchase_date']
             if isinstance(pd, str):
@@ -230,6 +230,8 @@ class PurchaseForm(ttk.Frame):
                 pd = pd.date()
             if pd == p_date and i + 1 < len(purchases):
                 prev_purchase = purchases[i + 1]
+                if i + 2 < len(purchases):
+                    prev_prev_purchase = purchases[i + 2]
                 break
 
         if not prev_purchase:
@@ -243,27 +245,6 @@ class PurchaseForm(ttk.Frame):
         elif isinstance(prev_date, datetime):
             prev_date = prev_date.date()
 
-        associated = None
-        for cons in consumptions:
-            start = cons['start_date']
-            if isinstance(start, str):
-                start = datetime.strptime(start, "%Y-%m-%d").date()
-            end = cons['end_date']
-            if isinstance(end, str):
-                end = datetime.strptime(end, "%Y-%m-%d").date()
-
-            if start >= prev_date and end <= p_date:
-                associated = cons
-                break
-            elif abs((start - prev_date).days) <= 2 and abs((end - p_date).days) <= 2:
-                associated = cons
-                break
-
-        if not associated:
-            self.consumption_inputs.pack_forget()
-            self.is_first_purchase = True
-            return
-
         self.is_first_purchase = False
         self.last_purchase_data = prev_purchase
         self.consumption_inputs.last_purchase_data = prev_purchase
@@ -273,9 +254,17 @@ class PurchaseForm(ttk.Frame):
         ci.last_purchase_date_label.configure(text=prev_date.strftime("%d/%m/%Y"))
         ci.last_purchase_quantity_label.configure(text=f"({prev_purchase['quantity']:.2f} {prev_purchase['unit']})")
 
-        previous_stock = prev_purchase.get('initial_stock', 0.0)
+        previous_stock = prev_purchase.get('remaining', 0.0)
         if previous_stock > 0:
-            ci.previous_stock_title_label.configure(text="Sobro de compra anterior:")
+            if prev_prev_purchase:
+                pp_date = prev_prev_purchase['purchase_date']
+                if isinstance(pp_date, str):
+                    pp_date = datetime.strptime(pp_date, "%Y-%m-%d").date()
+                elif isinstance(pp_date, datetime):
+                    pp_date = pp_date.date()
+                ci.previous_stock_title_label.configure(text=f"Sobro de compra anterior ({pp_date.strftime('%d/%m/%Y')}):")
+            else:
+                ci.previous_stock_title_label.configure(text="Sobro de compra anterior:")
             ci.previous_stock_label.configure(text=f"{previous_stock:.2f} {prev_purchase['unit']}")
         else:
             ci.previous_stock_title_label.configure(text="")
@@ -288,12 +277,9 @@ class PurchaseForm(ttk.Frame):
         else:
             ci.breakdown_label.configure(text=f"(Solo los {prev_purchase['quantity']:.2f} comprados)")
 
-        ci.consumed_var.set(f"{associated['quantity_consumed']:.2f}")
-        ci.remaining_var.set(f"{associated['quantity_remaining']:.2f}")
-
-        ci.consumption_notes_text.delete('1.0', 'end')
-        if associated.get('notes'):
-            ci.consumption_notes_text.insert('1.0', associated['notes'])
+        # Cargar remaining del purchase actual (en modo edicion)
+        current_remaining = purchase_data.get('remaining', 0.0)
+        ci.remaining_var.set(f"{current_remaining:.2f}")
 
         ci.pack(fill=X, pady=(10, 0))
 
@@ -343,13 +329,16 @@ class PurchaseForm(ttk.Frame):
         except Exception:
             purchase_date = date.today()
 
+        # Obtener remaining (lo que sobro del periodo anterior)
+        remaining = 0.0
         if not self.is_first_purchase:
-            if not self._validate_and_save_consumption(unit, purchase_date):
-                return
+            remaining = self._validate_consumption()
+            if remaining is None:
+                return  # Validacion fallo
 
         success, result = self.provider.add_purchase(
             self.supply_id, supplier_id, purchase_date,
-            quantity, unit, unit_price, total_price, notes
+            quantity, unit, unit_price, total_price, remaining, notes
         )
 
         if success:
@@ -360,75 +349,41 @@ class PurchaseForm(ttk.Frame):
         else:
             Messagebox.show_error(f"Error al registrar la compra: {result}", "Error")
 
-    def _validate_and_save_consumption(self, unit, purchase_date):
-        """Validar consumo y guardarlo. Retorna True si OK, False si error."""
+    def _validate_consumption(self):
+        """Validar remaining. Retorna remaining si OK, None si error."""
         ci = self.consumption_inputs
+        remaining_str = ci.remaining_var.get().strip()
 
-        consumed = ci.consumed_var.get().strip()
-        remaining = ci.remaining_var.get().strip()
-
-        if not consumed or not remaining:
-            Messagebox.show_error("Debe ingresar la cantidad consumida y restante", "Error")
-            return False
+        if not remaining_str:
+            Messagebox.show_error("Debe ingresar la cantidad restante", "Error")
+            return None
 
         try:
-            consumed = float(consumed)
-            remaining = float(remaining)
+            remaining = float(remaining_str)
         except ValueError:
-            Messagebox.show_error("Las cantidades deben ser numeros validos", "Error")
-            return False
+            Messagebox.show_error("La cantidad debe ser un numero valido", "Error")
+            return None
+
+        if remaining < 0:
+            Messagebox.show_error("La cantidad restante no puede ser negativa", "Error de Validacion")
+            return None
 
         if not self.last_purchase_data:
             Messagebox.show_error("Error: No se encontro informacion de la ultima compra", "Error")
-            return False
+            return None
 
         last_quantity = self.last_purchase_data['quantity']
-        last_unit = self.last_purchase_data['unit']
-        initial_stock = self.last_purchase_data.get('initial_stock', 0.0)
-        total_available_stock = initial_stock + last_quantity
+        prev_remaining = self.last_purchase_data.get('remaining', 0.0)
+        total_available = prev_remaining + last_quantity
 
-        if consumed > total_available_stock:
+        if remaining > total_available:
             Messagebox.show_error(
-                f"La cantidad consumida ({consumed:.2f} {last_unit}) no puede ser mayor "
-                f"al stock total disponible ({total_available_stock:.2f} {last_unit}).",
+                f"No puede sobrar mas ({remaining:.2f}) de lo que habia disponible ({total_available:.2f})",
                 "Error de Validacion"
             )
-            return False
+            return None
 
-        total_accounted = consumed + remaining
-        if abs(total_accounted - total_available_stock) > 0.01:
-            Messagebox.show_error(
-                f"Consumido ({consumed:.2f}) + Restante ({remaining:.2f}) = {total_accounted:.2f}\n"
-                f"No coincide con el total disponible: {total_available_stock:.2f}",
-                "Error de Validacion"
-            )
-            return False
-
-        if consumed < 0 or remaining < 0:
-            Messagebox.show_error("Las cantidades deben ser valores positivos.", "Error de Validacion")
-            return False
-
-        purchases = self.provider.get_purchases_by_supply(self.supply_id)
-        last_purchase_date = purchases[0]['purchase_date']
-        if isinstance(last_purchase_date, str):
-            start_date = datetime.strptime(last_purchase_date, "%Y-%m-%d").date()
-        elif isinstance(last_purchase_date, datetime):
-            start_date = last_purchase_date.date()
-        else:
-            start_date = last_purchase_date
-
-        consumption_notes = ci.consumption_notes_text.get('1.0', 'end-1c').strip()
-
-        success, result = self.provider.add_consumption(
-            self.supply_id, start_date, purchase_date,
-            consumed, remaining, unit, consumption_notes
-        )
-
-        if not success:
-            Messagebox.show_error(f"Error al registrar el consumo: {result}", "Error")
-            return False
-
-        return True
+        return remaining
 
     def _update_purchase(self):
         if not self.supply_id or not self.purchase_id:
@@ -470,9 +425,16 @@ class PurchaseForm(ttk.Frame):
         except Exception:
             purchase_date = date.today()
 
+        # Obtener remaining si no es primera compra
+        remaining = None
+        if not self.is_first_purchase:
+            remaining = self._validate_consumption()
+            if remaining is None:
+                return
+
         success, result = self.provider.update_purchase(
             self.purchase_id, supplier_id, purchase_date,
-            quantity, unit, unit_price, total_price, notes
+            quantity, unit, unit_price, total_price, remaining, notes
         )
 
         if success:

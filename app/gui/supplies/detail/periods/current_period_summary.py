@@ -10,7 +10,7 @@ MESES = {
 
 
 class CurrentPeriodSummary(ttk.Frame):
-    """Resumen colapsable del periodo de consumo actual"""
+    """Resumen colapsable del periodo de consumo actual (derivado de las 2 compras mas recientes)"""
 
     def __init__(self, parent, supply_data):
         super().__init__(parent)
@@ -21,7 +21,8 @@ class CurrentPeriodSummary(ttk.Frame):
         self.setup_ui()
 
     def setup_ui(self):
-        if not self.supply_data['consumptions']:
+        purchases = self.supply_data.get('purchases', [])
+        if len(purchases) < 2:
             return
 
         header = ttk.Frame(self)
@@ -50,56 +51,47 @@ class CurrentPeriodSummary(ttk.Frame):
             self.expanded = True
 
     def _build_summary(self, parent):
-        consumptions = self.supply_data['consumptions']
-        if not consumptions:
+        purchases = self.supply_data.get('purchases', [])
+        if len(purchases) < 2:
             return
 
-        current = consumptions[0]
+        latest = purchases[0]    # compra mas reciente
+        previous = purchases[1]  # compra anterior
 
-        start = self._to_date(current['start_date'])
-        end = self._to_date(current['end_date'])
+        # Derivar consumo entre las 2 compras
+        prev_remaining = previous.get('remaining', 0.0)
+        total_available = prev_remaining + previous['quantity']
+        curr_remaining = latest.get('remaining', 0.0)
+        consumed = max(0, total_available - curr_remaining)
 
-        start_str = f"{start.day}/{MESES[start.month]}/{start.year}" if start else str(current['start_date'])
-        end_str = f"{end.day}/{MESES[end.month]}/{end.year}" if end else str(current['end_date'])
+        start = self._to_date(previous['purchase_date'])
+        end = self._to_date(latest['purchase_date'])
+        unit = previous.get('unit', '')
+
+        start_str = f"{start.day}/{MESES[start.month]}/{start.year}" if start else "?"
+        end_str = f"{end.day}/{MESES[end.month]}/{end.year}" if end else "?"
 
         card = ttk.Labelframe(parent, text=f" {start_str}  →  {end_str}", bootstyle="info", padding=10)
         card.pack(fill=X, pady=(0, 5))
 
-        # Buscar compra del periodo
-        period_purchase = None
-        if start and self.supply_data['purchases']:
-            for p in self.supply_data['purchases']:
-                pd = self._to_date(p['purchase_date'])
-                if pd and pd <= start:
-                    period_purchase = p
-                    break
-
         kpi_frame = ttk.Frame(card)
         kpi_frame.pack(fill=X)
 
-        if period_purchase:
-            self._kpi(kpi_frame, "Compra", f"{period_purchase['quantity']:.2f} {period_purchase['unit']}", "info")
+        self._kpi(kpi_frame, "Compra", f"{previous['quantity']:.2f} {unit}", "info")
+        self._kpi(kpi_frame, "Consumido", f"{consumed:.2f} {unit}", "danger")
+        self._kpi(kpi_frame, "Restante", f"{curr_remaining:.2f} {unit}", "success")
 
-        self._kpi(kpi_frame, "Consumido", f"{current['quantity_consumed']:.2f} {current['unit']}", "danger")
-        self._kpi(kpi_frame, "Restante", f"{current['quantity_remaining']:.2f} {current['unit']}", "success")
-
-        latest = self.supply_data['purchases'][0] if self.supply_data['purchases'] else None
-        inv = current['quantity_remaining'] + (latest['quantity'] if latest else 0)
-        self._kpi(kpi_frame, "Inventario Disponible", f"{inv:.2f} {current['unit']}", "primary")
+        # Inventario disponible = remaining + quantity de la ultima compra
+        inv = curr_remaining + latest['quantity']
+        self._kpi(kpi_frame, "Inventario Disponible", f"{inv:.2f} {unit}", "primary")
 
         # Progress bar
-        if period_purchase and period_purchase['quantity'] > 0:
-            prev_stock = period_purchase.get('initial_stock', 0.0)
-            total = prev_stock + period_purchase['quantity']
-            if total > 0:
-                pct = (current['quantity_consumed'] / total) * 100
-                pf = ttk.Frame(card)
-                pf.pack(fill=X, pady=(8, 0))
-                ttk.Label(pf, text=f"Consumo: {pct:.1f}%", font=("Arial", 9), bootstyle="secondary").pack(side=LEFT, padx=(0, 10))
-                ttk.Progressbar(pf, value=pct, bootstyle="danger" if pct > 75 else "warning" if pct > 50 else "success").pack(side=LEFT, fill=X, expand=YES)
-
-        if current['notes']:
-            ttk.Label(card, text=f"Nota: {current['notes']}", font=("Arial", 9, "italic"), bootstyle="secondary", wraplength=600).pack(anchor=W, pady=(5, 0))
+        if total_available > 0:
+            pct = (consumed / total_available) * 100
+            pf = ttk.Frame(card)
+            pf.pack(fill=X, pady=(8, 0))
+            ttk.Label(pf, text=f"Consumo: {pct:.1f}%", font=("Arial", 9), bootstyle="secondary").pack(side=LEFT, padx=(0, 10))
+            ttk.Progressbar(pf, value=pct, bootstyle="danger" if pct > 75 else "warning" if pct > 50 else "success").pack(side=LEFT, fill=X, expand=YES)
 
     def _kpi(self, parent, label, value, style):
         f = ttk.Frame(parent)

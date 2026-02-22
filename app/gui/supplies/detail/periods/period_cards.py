@@ -11,7 +11,7 @@ MESES = {
 
 
 class PeriodCards(ttk.Frame):
-    """Tabla de periodos de consumo"""
+    """Tabla de periodos de consumo derivados de compras consecutivas"""
 
     def __init__(self, parent, supply_data):
         super().__init__(parent)
@@ -38,40 +38,31 @@ class PeriodCards(ttk.Frame):
             {"text": "Consumido", "stretch": False, "width": 90},
             {"text": "Restante", "stretch": False, "width": 90},
             {"text": "% Consumo", "stretch": False, "width": 90},
-            {"text": "Notas", "stretch": True, "width": 120},
         ]
 
         rows = []
         for p in periods:
-            purchase = p['purchase']
-            consumption = p['consumption']
-            prev_stock = purchase.get('initial_stock', 0.0)
-            total = prev_stock + purchase['quantity']
+            prev = p['purchase']
+            prev_remaining = prev.get('remaining', 0.0)
+            total = prev_remaining + prev['quantity']
 
             s, e = p['start_date'], p['end_date']
             desde = f"{s.day}/{MESES[s.month]}/{s.year}"
             hasta = f"{e.day}/{MESES[e.month]}/{e.year}"
 
-            if consumption:
-                consumed = consumption['quantity_consumed']
-                remaining = consumption['quantity_remaining']
-                pct = f"{consumed / total * 100:.0f}%" if total > 0 else "-"
-                notes = (consumption.get('notes') or '')[:30]
-            else:
-                consumed = remaining = 0
-                pct = "-"
-                notes = ""
+            consumed = p['consumed']
+            remaining = p['remaining']
+            pct = f"{consumed / total * 100:.0f}%" if total > 0 else "-"
 
             rows.append([
                 desde,
                 hasta,
-                f"{purchase['quantity']:.2f} {purchase['unit']}",
-                f"{prev_stock:.2f}" if prev_stock > 0 else "-",
+                f"{prev['quantity']:.2f} {prev['unit']}",
+                f"{prev_remaining:.2f}" if prev_remaining > 0 else "-",
                 f"{total:.2f}",
-                f"{consumed:.2f}" if consumption else "-",
-                f"{remaining:.2f}" if consumption else "-",
+                f"{consumed:.2f}",
+                f"{remaining:.2f}",
                 pct,
-                notes
             ])
 
         self.table = Tableview(
@@ -89,33 +80,32 @@ class PeriodCards(ttk.Frame):
     # ─── Crear periodos ───────────────────────────────────────────
 
     def _create_periods(self):
+        """Derivar periodos de consumo a partir de compras consecutivas.
+        consumed = (prev.remaining + prev.quantity) - curr.remaining
+        """
         purchases = self.supply_data['purchases']
         if len(purchases) < 2:
             return []
 
         periods = []
         for i in range(len(purchases) - 1):
-            curr = purchases[i]
-            prev = purchases[i + 1]
+            curr = purchases[i]      # compra mas reciente
+            prev = purchases[i + 1]  # compra anterior
             curr_date = self._to_date(curr['purchase_date'])
             prev_date = self._to_date(prev['purchase_date'])
 
-            consumption = None
-            for cons in self.supply_data['consumptions']:
-                cs = self._to_date(cons['start_date'])
-                ce = self._to_date(cons['end_date'])
-                if cs >= prev_date and ce <= curr_date:
-                    consumption = cons
-                    break
-                elif abs((cs - prev_date).days) <= 2 and abs((ce - curr_date).days) <= 2:
-                    consumption = cons
-                    break
+            prev_remaining = prev.get('remaining', 0.0)
+            total_available = prev_remaining + prev['quantity']
+            curr_remaining = curr.get('remaining', 0.0)
+            consumed = max(0, total_available - curr_remaining)
 
             periods.append({
                 'start_date': prev_date,
                 'end_date': curr_date,
                 'purchase': prev,
-                'consumption': consumption,
+                'consumed': consumed,
+                'remaining': curr_remaining,
+                'total_available': total_available,
             })
 
         return periods
