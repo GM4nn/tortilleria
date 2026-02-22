@@ -1,17 +1,18 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.constants import ORDER_STATUSES
+from app.gui.components.pagination_bar import PaginationBar
 
 
 class OrdersList(ttk.Labelframe):
-    def __init__(self, parent, customers_cache, on_select):
+    def __init__(self, parent, customers_cache, on_select, on_page_change, pagesize=10):
         super().__init__(parent, text="  Lista de Pedidos  ", padding=10)
         self.customers_cache = customers_cache
         self.on_select = on_select
 
-        self.setup_ui()
+        self.setup_ui(on_page_change, pagesize)
 
-    def setup_ui(self):
+    def setup_ui(self, on_page_change, pagesize):
         list_canvas_frame = ttk.Frame(self)
         list_canvas_frame.pack(fill=BOTH, expand=YES)
 
@@ -37,6 +38,9 @@ class OrdersList(ttk.Labelframe):
 
         self.list_canvas.pack(side=LEFT, fill=BOTH, expand=YES)
         self.list_scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.pagination = PaginationBar(self, on_page_change=on_page_change, pagesize=pagesize)
+        self.pagination.pack(fill=X, pady=(5, 0))
 
     def display_orders(self, orders):
         for widget in self.list_inner_frame.winfo_children():

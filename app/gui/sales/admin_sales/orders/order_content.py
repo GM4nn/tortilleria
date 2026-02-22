@@ -13,7 +13,7 @@ class OrderContent(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.content = content
-        self.all_orders = []
+        self._filters = None
         self.customers_cache = {}
 
         self.setup_ui()
@@ -37,7 +37,9 @@ class OrderContent(ttk.Frame):
         self.orders_list = OrdersList(
             main_container,
             customers_cache=self.customers_cache,
-            on_select=self.on_order_select
+            on_select=self.on_order_select,
+            on_page_change=self.display_current_page,
+            pagesize=10
         )
         self.orders_list.pack(side=LEFT, fill=BOTH, expand=YES, padx=(0, 10))
 
@@ -50,7 +52,6 @@ class OrderContent(ttk.Frame):
         self.detail_order.pack(side=LEFT, fill=Y)
 
     def load_orders(self):
-        self.all_orders = order_provider.get_all()
         self.load_customers_cache()
         self.header.load_customers()
         self.filter_orders()
@@ -65,15 +66,22 @@ class OrderContent(ttk.Frame):
         status_filter = self.header.get_status_filter()
         customer_filter = self.header.get_customer_filter()
 
-        filtered = self.all_orders
-
+        filters = []
         if status_filter != ORDER_STATUSES_ALL:
-            filtered = [o for o in filtered if o.status == status_filter]
-
+            filters += order_provider.build_status_filter(status_filter)
         if customer_filter:
-            filtered = [o for o in filtered if o.customer_id == customer_filter]
+            filters += order_provider.build_customer_filter(customer_filter)
 
-        self.orders_list.display_orders(filtered)
+        self._filters = filters or None
+        self.orders_list.pagination.reset()
+        self.orders_list.pagination.update_total(order_provider.get_count(self._filters))
+        self.display_current_page()
+
+    def display_current_page(self):
+        pagination = self.orders_list.pagination
+        offset = pagination.get_offset()
+        orders = order_provider.get_all(offset, pagination._pagesize, self._filters)
+        self.orders_list.display_orders(orders)
 
     def on_order_select(self, order):
         self.detail_order.show_order_details(order)

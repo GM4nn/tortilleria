@@ -38,22 +38,51 @@ class OrderProvider:
         finally:
             db.close()
 
-    def get_all(self):
+    def get_all(self, offset=0, limit=None, filters=None):
 
         db = get_db()
 
         try:
-            orders = db.query(
+            query = db.query(
                 Order.id,
                 Order.date,
                 Order.total,
                 Order.status,
                 Order.customer_id
-            ).order_by(Order.date.desc()).all()
-            return orders
+            )
+
+            if filters:
+                query = query.filter(*filters)
+
+            query = query.order_by(Order.date.desc())
+
+            if limit is not None:
+                print(limit)
+                print(offset)
+                query = query.offset(offset).limit(limit)
+
+            return query.all()
 
         finally:
             db.close()
+
+    def get_count(self, filters=None):
+
+        db = get_db()
+
+        try:
+            query = db.query(func.count(Order.id))
+            if filters:
+                query = query.filter(*filters)
+            return query.scalar() or 0
+        finally:
+            db.close()
+
+    def build_status_filter(self, status):
+        return [Order.status == status]
+
+    def build_customer_filter(self, customer_id):
+        return [Order.customer_id == customer_id]
 
     def get_pending(self):
 
