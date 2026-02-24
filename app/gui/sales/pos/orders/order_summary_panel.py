@@ -16,6 +16,7 @@ class OrderSummaryPanel(ttk.Frame):
 
         self.setup_gui_title()
         self.setup_gui_items()
+        self.setup_gui_payment()
         self.setup_gui_btn_actions()
 
     def setup_gui_title(self):
@@ -83,6 +84,18 @@ class OrderSummaryPanel(ttk.Frame):
         )
         self.no_items_label.pack(pady=20)
 
+    def setup_gui_payment(self):
+        payment_frame = ttk.Labelframe(self, text="Anticipo / Pago", padding=10)
+        payment_frame.pack(fill=X, pady=(0, 10))
+
+        self.payment_var = ttk.StringVar(value="0")
+        ttk.Entry(
+            payment_frame,
+            textvariable=self.payment_var,
+            font=("Arial", 14),
+            justify=CENTER
+        ).pack(fill=X, ipady=3)
+
     def setup_gui_btn_actions(self):
 
         btn_frame = ttk.Frame(self)
@@ -123,6 +136,15 @@ class OrderSummaryPanel(ttk.Frame):
 
         total = sum(item['subtotal'] for item in order_items)
         self.total_label.config(text=f"${total:.2f}")
+
+    def get_payment_amount(self):
+        try:
+            return float(self.payment_var.get())
+        except ValueError:
+            return 0.0
+
+    def reset_payment(self):
+        self.payment_var.set("0")
 
     def set_save_enabled(self, enabled):
         self.btn_save.config(state=NORMAL if enabled else DISABLED)

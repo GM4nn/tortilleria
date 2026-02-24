@@ -7,7 +7,7 @@ from app.constants import mexico_now
 
 class OrderProvider:
 
-    def save(self, items, total, customer_id, notes=None):
+    def save(self, items, total, customer_id, notes=None, amount_paid=0.0):
 
         db = get_db()
         try:
@@ -15,7 +15,8 @@ class OrderProvider:
                 total=total,
                 customer_id=customer_id,
                 status='pendiente',
-                notes=notes
+                notes=notes,
+                amount_paid=amount_paid
             )
             db.add(order)
             db.flush()
@@ -48,7 +49,8 @@ class OrderProvider:
                 Order.date,
                 Order.total,
                 Order.status,
-                Order.customer_id
+                Order.customer_id,
+                Order.amount_paid
             )
 
             if filters:
@@ -94,7 +96,8 @@ class OrderProvider:
                 Order.date,
                 Order.total,
                 Order.status,
-                Order.customer_id
+                Order.customer_id,
+                Order.amount_paid
             ).filter(
                 Order.status == 'pendiente'
             ).order_by(Order.date.desc()).all()
@@ -119,6 +122,8 @@ class OrderProvider:
                     'completed_at': order.completed_at,
                     'customer_id': order.customer_id,
                     'notes': order.notes,
+                    'amount_paid': order.amount_paid or 0.0,
+                    'payment_status': order.payment_status,
                     'details': [
                         {
                             'product_id': d.product_id,
@@ -143,7 +148,8 @@ class OrderProvider:
                 Order.id,
                 Order.date,
                 Order.total,
-                Order.status
+                Order.status,
+                Order.amount_paid
             ).filter(
                 Order.customer_id == customer_id
             ).order_by(Order.date.desc()).all()
@@ -169,12 +175,42 @@ class OrderProvider:
         finally:
             db.close()
 
-    def complete_order(self, order_id, refund_items):
+    def register_payment(self, order_id, amount):
         db = get_db()
         try:
             order = db.query(Order).filter(Order.id == order_id).first()
             if not order:
                 return False, "Pedido no encontrado"
+
+            current_paid = order.amount_paid or 0.0
+            new_paid = current_paid + amount
+
+            if new_paid > order.total:
+                return False, f"El monto excede el total del pedido (${order.total:.2f})"
+
+            order.amount_paid = new_paid
+            db.commit()
+            return True, order_id
+        except Exception as e:
+            db.rollback()
+            return False, str(e)
+        finally:
+            db.close()
+
+    def complete_order(self, order_id, refund_items, final_payment=0.0):
+        db = get_db()
+        try:
+            order = db.query(Order).filter(Order.id == order_id).first()
+            if not order:
+                return False, "Pedido no encontrado"
+
+            # Aplicar pago final si hay
+            if final_payment > 0:
+                order.amount_paid = (order.amount_paid or 0.0) + final_payment
+
+            # Validar que esté completamente pagado
+            if round(order.amount_paid or 0.0, 2) != round(order.total, 2):
+                return False, f"El pedido no está completamente pagado. Pagado: ${order.amount_paid or 0.0:.2f}, Total: ${order.total:.2f}"
 
             # Guardar reembolsos
             for item in refund_items:

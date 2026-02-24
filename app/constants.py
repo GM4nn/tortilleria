@@ -92,6 +92,18 @@ ORDER_STATUSES = {
     ORDER_STATUSES_CANCEL:  {"label": "Cancelado",  "color": "secondary"},
 }
 
+# PAYMENT STATUSES
+
+PAYMENT_STATUS_UNPAID = "Sin Pagar"
+PAYMENT_STATUS_PARTIAL = "Parcialmente Pagado"
+PAYMENT_STATUS_PAID = "Pagado"
+
+PAYMENT_STATUSES = {
+    PAYMENT_STATUS_UNPAID:  {"label": "Sin Pagar",            "color": "danger"},
+    PAYMENT_STATUS_PARTIAL: {"label": "Parcialmente Pagado",  "color": "warning"},
+    PAYMENT_STATUS_PAID:    {"label": "Pagado",               "color": "success"},
+}
+
 # CUSTOMERS
 
 CUSTOMER_MOSTRADOR_NAME = "Cliente Mostrador"
@@ -171,11 +183,13 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     → Para obtener proveedor: JOIN con suppliers usando supplier_id
 
     TABLE: orders
-    ✓ Tiene columnas: id, date, total, customer_id, status, completed_at, notes
+    ✓ Tiene columnas: id, date, total, customer_id, status, completed_at, notes, amount_paid
     ✓ SÍ tiene columnas de FECHA: date, completed_at
     ✓ date = fecha en que se creó el pedido
     ✓ completed_at = fecha en que se marcó como completado (NULL si no está completado)
-    ✓ status puede ser: 'pendiente', 'completado', 'cancelado'
+    ✓ status puede ser: 'pendiente', 'completado', 'cancelado' (estado de entrega)
+    ✓ amount_paid = monto pagado del pedido (0 = sin pagar, parcial = parcialmente pagado, igual a total = pagado)
+    ✓ Estado de pago derivado: 'Sin Pagar' (amount_paid=0), 'Parcialmente Pagado' (0 < amount_paid < total), 'Pagado' (amount_paid >= total)
     → Para obtener cliente: JOIN con customers usando customer_id
 
     TABLE: order_details

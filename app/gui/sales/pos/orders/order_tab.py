@@ -104,19 +104,30 @@ class OrderTab(ttk.Frame):
             return
 
         total = sum(item['subtotal'] for item in self.order_items)
+        amount_paid = self.summary_panel.get_payment_amount()
+
+        if amount_paid < 0:
+            mb.showwarning("Error", "El anticipo no puede ser negativo")
+            return
+
+        if amount_paid > total:
+            mb.showwarning("Error", f"El anticipo no puede exceder el total (${total:.2f})")
+            return
 
         success, result = order_provider.save(
             items=self.order_items,
             total=total,
-            customer_id=self.selected_customer.id
+            customer_id=self.selected_customer.id,
+            amount_paid=amount_paid
         )
 
         if success:
+            payment_msg = f"\nAnticipo: ${amount_paid:.2f}" if amount_paid > 0 else ""
             mb.showinfo(
                 "Pedido Guardado",
                 f"Pedido #{result} guardado correctamente\n\n"
                 f"Cliente: {self.selected_customer.customer_name}\n"
-                f"Total: ${total:.2f}"
+                f"Total: ${total:.2f}{payment_msg}"
             )
             self.clear_order()
         else:
@@ -128,6 +139,7 @@ class OrderTab(ttk.Frame):
         self.customers_panel.clear_selection()
         self.products_panel.hide_products()
         self.summary_panel.clear_customer()
+        self.summary_panel.reset_payment()
         self._refresh_summary()
 
     def _refresh_summary(self):

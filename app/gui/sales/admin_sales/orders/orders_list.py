@@ -1,6 +1,10 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from app.constants import ORDER_STATUSES
+from app.constants import (
+    ORDER_STATUSES,
+    PAYMENT_STATUS_UNPAID, PAYMENT_STATUS_PARTIAL, PAYMENT_STATUS_PAID,
+    PAYMENT_STATUSES,
+)
 from app.gui.components.pagination_bar import PaginationBar
 
 
@@ -109,15 +113,36 @@ class OrdersList(ttk.Labelframe):
             bootstyle="success"
         ).pack(side=LEFT)
 
+        # Badges de estado (derecha)
+        badges_frame = ttk.Frame(bottom_row)
+        badges_frame.pack(side=RIGHT)
+
         ttk.Label(
-            bottom_row,
+            badges_frame,
             text=f"  {status_info['label']}  ",
             font=("Arial", 9, "bold"),
             bootstyle=f"inverse-{status_info['color']}"
         ).pack(side=RIGHT)
 
+        # Badge de estado de pago
+        amount_paid = getattr(order, 'amount_paid', 0) or 0
+        if amount_paid <= 0:
+            ps = PAYMENT_STATUS_UNPAID
+        elif amount_paid < order.total:
+            ps = PAYMENT_STATUS_PARTIAL
+        else:
+            ps = PAYMENT_STATUS_PAID
+
+        ps_info = PAYMENT_STATUSES[ps]
+        ttk.Label(
+            badges_frame,
+            text=f"  {ps_info['label']}  ",
+            font=("Arial", 8, "bold"),
+            bootstyle=f"inverse-{ps_info['color']}"
+        ).pack(side=RIGHT, padx=(0, 5))
+
         # Hacer clickeable
-        for widget in [card, content]:
+        for widget in [card, content, badges_frame]:
             widget.bind("<Button-1>", lambda e, o=order: self.on_select(o))
             widget.configure(cursor="hand2")
 

@@ -1,7 +1,12 @@
 from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.data.database import Base
-from app.constants import mexico_now
+from app.constants import (
+    mexico_now,
+    PAYMENT_STATUS_UNPAID,
+    PAYMENT_STATUS_PARTIAL,
+    PAYMENT_STATUS_PAID,
+)
 
 
 class Order(Base):
@@ -14,10 +19,21 @@ class Order(Base):
     status = Column(String(50), default='pendiente')  # pendiente, completado, cancelado
     completed_at = Column(DateTime, nullable=True)
     notes = Column(String(500), nullable=True)
+    amount_paid = Column(Float, default=0.0)
 
     # Relationships
     order_details = relationship('OrderDetail', back_populates='order', cascade='all, delete-orphan')
     customer = relationship('Customer', backref='orders')
+
+    @property
+    def payment_status(self):
+        paid = self.amount_paid or 0.0
+        if paid <= 0:
+            return PAYMENT_STATUS_UNPAID
+        elif paid < self.total:
+            return PAYMENT_STATUS_PARTIAL
+        else:
+            return PAYMENT_STATUS_PAID
 
     def __repr__(self):
         return f"<Order(id={self.id}, date={self.date}, total={self.total}, customer_id={self.customer_id}, status={self.status})>"

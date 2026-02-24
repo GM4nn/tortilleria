@@ -4,7 +4,11 @@ from ttkbootstrap.constants import *
 from app.data.providers.orders import order_provider
 from app.data.providers.refunds import refund_provider
 from app.gui.sales.admin_sales.orders.refund_dialog import RefundDialog
-from app.constants import ORDER_STATUSES, ORDER_STATUSES_COMPLETE, ORDER_STATUSES_PENDING
+from app.gui.sales.admin_sales.orders.payment_dialog import PaymentDialog, PaymentRegisterDialog
+from app.constants import (
+    ORDER_STATUSES, ORDER_STATUSES_COMPLETE, ORDER_STATUSES_PENDING,
+    PAYMENT_STATUSES, PAYMENT_STATUS_PAID,
+)
 
 
 class DetailOrder(ttk.Labelframe):
@@ -31,10 +35,12 @@ class DetailOrder(ttk.Labelframe):
         self.no_selection_label.pack(expand=YES)
 
     def show_order_details(self, order):
+        order_id = order if isinstance(order, int) else order.id
+
         for widget in self.detail_content.winfo_children():
             widget.destroy()
 
-        order_data = order_provider.get_by_id(order.id)
+        order_data = order_provider.get_by_id(order_id)
 
         if not order_data:
             ttk.Label(
@@ -91,10 +97,11 @@ class DetailOrder(ttk.Labelframe):
         ttk.Label(client_frame, text="Cliente:", font=("Arial", 10, "bold")).pack(side=LEFT)
         ttk.Label(client_frame, text=customer_name, font=("Arial", 10)).pack(side=LEFT, padx=(5, 0))
 
+        # Estado de entrega
         status_frame = ttk.Frame(self.detail_content)
         status_frame.pack(fill=X, pady=(5, 0))
 
-        ttk.Label(status_frame, text="Estado:", font=("Arial", 10, "bold")).pack(side=LEFT)
+        ttk.Label(status_frame, text="Entrega:", font=("Arial", 10, "bold")).pack(side=LEFT)
 
         status_info = ORDER_STATUSES.get(order_data['status'], {"label": order_data['status'], "color": "secondary"})
 
@@ -103,6 +110,37 @@ class DetailOrder(ttk.Labelframe):
             text=f"  {status_info['label']}  ",
             font=("Arial", 9, "bold"),
             bootstyle=f"inverse-{status_info['color']}"
+        ).pack(side=LEFT, padx=(5, 0))
+
+        # Estado de pago
+        payment_status = order_data.get('payment_status', 'Sin Pagar')
+        payment_info = PAYMENT_STATUSES.get(payment_status, {"label": payment_status, "color": "secondary"})
+
+        payment_frame = ttk.Frame(self.detail_content)
+        payment_frame.pack(fill=X, pady=(5, 0))
+
+        ttk.Label(payment_frame, text="Pago:", font=("Arial", 10, "bold")).pack(side=LEFT)
+
+        ttk.Label(
+            payment_frame,
+            text=f"  {payment_info['label']}  ",
+            font=("Arial", 9, "bold"),
+            bootstyle=f"inverse-{payment_info['color']}"
+        ).pack(side=LEFT, padx=(5, 0))
+
+        # Monto pagado
+        amount_paid = order_data.get('amount_paid', 0.0)
+        total = order_data['total']
+
+        paid_frame = ttk.Frame(self.detail_content)
+        paid_frame.pack(fill=X, pady=(3, 0))
+
+        ttk.Label(paid_frame, text="Pagado:", font=("Arial", 10)).pack(side=LEFT)
+        ttk.Label(
+            paid_frame,
+            text=f"${amount_paid:.2f} / ${total:.2f}",
+            font=("Arial", 10, "bold"),
+            bootstyle="success" if payment_status == PAYMENT_STATUS_PAID else "danger"
         ).pack(side=LEFT, padx=(5, 0))
 
     def _render_products(self, details):
@@ -167,6 +205,16 @@ class DetailOrder(ttk.Labelframe):
         btn_frame = ttk.Frame(self.detail_content)
         btn_frame.pack(fill=X)
 
+        # Botón de registrar pago (solo si no está completamente pagado)
+        payment_status = order_data.get('payment_status', 'Sin Pagar')
+        if payment_status != PAYMENT_STATUS_PAID:
+            ttk.Button(
+                btn_frame,
+                text="Registrar Pago",
+                command=lambda: self.register_payment(order_data),
+                bootstyle="info"
+            ).pack(fill=X, pady=2)
+
         ttk.Button(
             btn_frame,
             text="Marcar Completado",
@@ -225,14 +273,48 @@ class DetailOrder(ttk.Labelframe):
                     wraplength=280
                 ).pack(anchor=W, pady=(4, 0))
 
+    def register_payment(self, order_data):
+        amount_paid = order_data.get('amount_paid', 0.0)
+        remaining = round(order_data['total'] - amount_paid, 2)
+
+        dialog = PaymentRegisterDialog(self.winfo_toplevel(), order_data, remaining)
+        self.wait_window(dialog)
+
+        if dialog.result is None:
+            return
+
+        success, result = order_provider.register_payment(order_data['id'], dialog.result)
+
+        if success:
+            mb.showinfo("Éxito", f"Pago de ${dialog.result:.2f} registrado")
+            self.on_order_changed()
+            self.show_order_details(order_data['id'])
+        else:
+            mb.showerror("Error", f"Error al registrar pago: {result}")
+
     def complete_order(self, order_data):
+        # Primero el dialog de devoluciones
         dialog = RefundDialog(self.winfo_toplevel(), order_data)
         self.wait_window(dialog)
 
         if dialog.result is None:
             return
 
-        success, result = order_provider.complete_order(order_data['id'], dialog.result)
+        refund_items = dialog.result
+        final_payment = 0.0
+
+        # Si no está completamente pagado, mostrar dialog de pago
+        payment_status = order_data.get('payment_status', 'Sin Pagar')
+        if payment_status != PAYMENT_STATUS_PAID:
+            pay_dialog = PaymentDialog(self.winfo_toplevel(), order_data)
+            self.wait_window(pay_dialog)
+
+            if pay_dialog.result is None:
+                return
+
+            final_payment = pay_dialog.result
+
+        success, result = order_provider.complete_order(order_data['id'], refund_items, final_payment)
 
         if success:
             mb.showinfo("Éxito", f"Pedido #{order_data['id']} completado")
