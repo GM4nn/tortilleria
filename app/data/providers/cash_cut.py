@@ -1,8 +1,16 @@
+from datetime import datetime, timedelta
 from sqlalchemy import func
 from app.models.cash_cut import CashCut
 from app.models import Sale, Order
 from app.data.database import get_db
 from app.constants import mexico_now
+
+
+def _day_range(d):
+    """Returns (start_of_day, start_of_next_day) for datetime range queries.
+    Portable across SQLite, PostgreSQL, MySQL."""
+    start = datetime(d.year, d.month, d.day)
+    return start, start + timedelta(days=1)
 
 
 class CashCutProvider:
@@ -27,9 +35,10 @@ class CashCutProvider:
     def get_today_cut(self):
         db = get_db()
         try:
-            today_str = mexico_now().date().isoformat()
+            day_start, day_end = _day_range(mexico_now().date())
             cut = db.query(CashCut).filter(
-                func.date(CashCut.closed_at) == today_str
+                CashCut.closed_at >= day_start,
+                CashCut.closed_at < day_end,
             ).first()
             if cut:
                 return {
@@ -54,14 +63,15 @@ class CashCutProvider:
     def get_current_period_summary(self):
         db = get_db()
         try:
-            today_str = mexico_now().date().isoformat()
+            day_start, day_end = _day_range(mexico_now().date())
 
             # Sales of today
             sales_result = db.query(
                 func.count(Sale.id),
                 func.coalesce(func.sum(Sale.total), 0.0)
             ).filter(
-                func.date(Sale.date) == today_str
+                Sale.date >= day_start,
+                Sale.date < day_end,
             ).first()
 
             sales_count = sales_result[0] or 0
@@ -73,7 +83,8 @@ class CashCutProvider:
                 func.coalesce(func.sum(Order.total), 0.0)
             ).filter(
                 Order.status == 'completado',
-                func.date(Order.completed_at) == today_str
+                Order.completed_at >= day_start,
+                Order.completed_at < day_end,
             ).first()
 
             orders_count = orders_result[0] or 0
@@ -158,9 +169,11 @@ class CashCutProvider:
             db.close()
 
     def build_date_range_filter(self, start_date, end_date):
+        start_dt = datetime(start_date.year, start_date.month, start_date.day)
+        end_dt = datetime(end_date.year, end_date.month, end_date.day) + timedelta(days=1)
         return [
-            func.date(CashCut.closed_at) >= start_date.isoformat(),
-            func.date(CashCut.closed_at) <= end_date.isoformat(),
+            CashCut.closed_at >= start_dt,
+            CashCut.closed_at < end_dt,
         ]
 
     def get_by_id(self, cut_id):

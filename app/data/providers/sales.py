@@ -1,4 +1,5 @@
-from sqlalchemy import func, cast, Date
+from datetime import datetime, timedelta
+from sqlalchemy import func
 from app.models import Sale, SaleDetail
 from app.data.database import get_db
 from app.constants import mexico_now
@@ -39,12 +40,15 @@ class SaleProvider:
         
         try:
             today = mexico_now().date()
+            day_start = datetime(today.year, today.month, today.day)
+            day_end = day_start + timedelta(days=1)
 
             result = db.query(
                 func.count(Sale.id),
                 func.coalesce(func.sum(Sale.total), 0.0)
             ).filter(
-                cast(Sale.date, Date) == today
+                Sale.date >= day_start,
+                Sale.date < day_end,
             ).first()
 
             return result[0] or 0, result[1] or 0.0
@@ -91,9 +95,11 @@ class SaleProvider:
             db.close()
 
     def build_date_range_filter(self, start_date, end_date):
+        start_dt = datetime(start_date.year, start_date.month, start_date.day)
+        end_dt = datetime(end_date.year, end_date.month, end_date.day) + timedelta(days=1)
         return [
-            func.date(Sale.date) >= start_date.isoformat(),
-            func.date(Sale.date) <= end_date.isoformat()
+            Sale.date >= start_dt,
+            Sale.date < end_dt,
         ]
 
 

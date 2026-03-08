@@ -1,6 +1,7 @@
 from app.models import Order, OrderDetail
 from app.models.order_refund import OrderRefund
-from sqlalchemy import func, cast, Date, case, literal
+from datetime import datetime, timedelta
+from sqlalchemy import func, case, literal
 from app.data.database import get_db
 from app.constants import (
     mexico_now,
@@ -103,9 +104,11 @@ class OrderProvider:
         return []
 
     def build_date_range_filter(self, start_date, end_date):
+        start_dt = datetime(start_date.year, start_date.month, start_date.day)
+        end_dt = datetime(end_date.year, end_date.month, end_date.day) + timedelta(days=1)
         return [
-            func.date(Order.date) >= start_date.isoformat(),
-            func.date(Order.date) <= end_date.isoformat()
+            Order.date >= start_dt,
+            Order.date < end_dt,
         ]
 
     def get_pending(self):
@@ -261,12 +264,15 @@ class OrderProvider:
 
         try:
             today = mexico_now().date()
+            day_start = datetime(today.year, today.month, today.day)
+            day_end = day_start + timedelta(days=1)
 
             result = db.query(
                 func.count(Order.id),
                 func.coalesce(func.sum(Order.total), 0.0)
             ).filter(
-                cast(Order.date, Date) == today
+                Order.date >= day_start,
+                Order.date < day_end,
             ).first()
 
             return result[0] or 0, result[1] or 0.0
