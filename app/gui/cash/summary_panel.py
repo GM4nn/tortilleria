@@ -1,7 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.data.providers.cash_cut import cash_cut_provider
-from app.constants import mexico_now
 
 
 class SummaryPanel(ttk.Labelframe):
@@ -77,21 +76,16 @@ class SummaryPanel(ttk.Labelframe):
     def load_summary(self):
         summary = self.provider.get_current_period_summary()
 
-        # Today label
         today_str = summary['today'].strftime("%d/%b/%Y")
         self.lbl_period.config(text=f"Fecha: {today_str}")
 
-        # Sales
         self.sales_card._lbl_amount.config(text=f"${summary['sales_total']:,.2f}")
         self.sales_card._lbl_count.config(text=f"{summary['sales_count']} ventas")
 
-        # Orders
         self.orders_card._lbl_amount.config(text=f"${summary['orders_total']:,.2f}")
         self.orders_card._lbl_count.config(text=f"{summary['orders_count']} pedidos")
 
-        # Total
         self.total_card._lbl_amount.config(text=f"${summary['expected_total']:,.2f}")
         self.total_card._lbl_count.config(text="")
 
-        # Store for the register form
         self.content.current_summary = summary

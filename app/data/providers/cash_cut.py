@@ -35,7 +35,17 @@ class CashCutProvider:
                 return {
                     'id': cut.id,
                     'closed_at': cut.closed_at,
+                    'sales_count': cut.sales_count,
+                    'orders_count': cut.orders_count,
+                    'sales_total': cut.sales_total,
+                    'orders_total': cut.orders_total,
+                    'expected_total': cut.expected_total,
+                    'declared_cash': cut.declared_cash,
+                    'declared_card': cut.declared_card,
+                    'declared_transfer': cut.declared_transfer,
                     'declared_total': cut.declared_total,
+                    'difference': cut.difference,
+                    'notes': cut.notes,
                 }
             return None
         finally:
@@ -109,18 +119,25 @@ class CashCutProvider:
         finally:
             db.close()
 
-    def get_all(self, offset=0, limit=None):
+    def get_all(self, offset=0, limit=None, filters=None):
         db = get_db()
         try:
             query = db.query(
                 CashCut.id,
                 CashCut.closed_at,
                 CashCut.expected_total,
+                CashCut.declared_cash,
+                CashCut.declared_card,
+                CashCut.declared_transfer,
                 CashCut.declared_total,
                 CashCut.difference,
                 CashCut.sales_count,
                 CashCut.orders_count,
             ).order_by(CashCut.closed_at.desc())
+
+            if filters:
+                for f in filters:
+                    query = query.filter(f)
 
             if limit is not None:
                 query = query.offset(offset).limit(limit)
@@ -129,12 +146,22 @@ class CashCutProvider:
         finally:
             db.close()
 
-    def get_count(self):
+    def get_count(self, filters=None):
         db = get_db()
         try:
-            return db.query(func.count(CashCut.id)).scalar() or 0
+            query = db.query(func.count(CashCut.id))
+            if filters:
+                for f in filters:
+                    query = query.filter(f)
+            return query.scalar() or 0
         finally:
             db.close()
+
+    def build_date_range_filter(self, start_date, end_date):
+        return [
+            func.date(CashCut.closed_at) >= start_date.isoformat(),
+            func.date(CashCut.closed_at) <= end_date.isoformat(),
+        ]
 
     def get_by_id(self, cut_id):
         db = get_db()
