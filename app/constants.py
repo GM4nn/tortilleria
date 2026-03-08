@@ -94,11 +94,13 @@ ORDER_STATUSES = {
 
 # PAYMENT STATUSES
 
+PAYMENT_STATUS_ALL = "todos"
 PAYMENT_STATUS_UNPAID = "Sin Pagar"
 PAYMENT_STATUS_PARTIAL = "Parcialmente Pagado"
 PAYMENT_STATUS_PAID = "Pagado"
 
 PAYMENT_STATUSES = {
+    PAYMENT_STATUS_ALL:     {"label": "Todos",               "color": "primary"},
     PAYMENT_STATUS_UNPAID:  {"label": "Sin Pagar",            "color": "danger"},
     PAYMENT_STATUS_PARTIAL: {"label": "Parcialmente Pagado",  "color": "warning"},
     PAYMENT_STATUS_PAID:    {"label": "Pagado",               "color": "success"},

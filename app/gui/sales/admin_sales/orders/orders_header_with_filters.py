@@ -1,7 +1,9 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from ttkbootstrap.widgets import DateEntry
+from datetime import datetime, timedelta
 from app.data.providers.customers import customer_provider
-from app.constants import ORDER_STATUSES
+from app.constants import ORDER_STATUSES, ORDER_STATUSES_ALL, PAYMENT_STATUSES, PAYMENT_STATUS_ALL, mexico_now
 
 
 class OrdersHeaderWithFilters(ttk.Frame):
@@ -18,8 +20,7 @@ class OrdersHeaderWithFilters(ttk.Frame):
 
     def setup_ui(self):
         self.setup_header()
-        self.setup_status_filter()
-        self.setup_customer_filter()
+        self.setup_filters()
 
     def setup_header(self):
         header_frame = ttk.Frame(self)
@@ -38,43 +39,125 @@ class OrdersHeaderWithFilters(ttk.Frame):
             bootstyle="info-outline"
         ).pack(side=RIGHT)
 
-    def setup_status_filter(self):
-        filter_frame = ttk.Frame(self)
-        filter_frame.pack(fill=X, padx=10, pady=(0, 5))
+    def setup_filters(self):
+        filters_frame = ttk.Frame(self)
+        filters_frame.pack(fill=X, padx=10, pady=(0, 10))
+        filters_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(filter_frame, text="Filtrar por estado:").pack(side=LEFT)
+        label_width = 25
 
-        self.status_var = ttk.StringVar(value="")
-        statuses = [(info["label"], key) for key, info in ORDER_STATUSES.items()]
+        # --- Fila 0: Fecha ---
+        today = mexico_now()
+        start_of_week = today - timedelta(days=today.weekday())
 
-        for text, value in statuses:
+        ttk.Label(
+            filters_frame,
+            text="Fecha:",
+            width=label_width,
+            anchor=W
+        ).grid(row=0, column=0, sticky=W, pady=3)
+
+        date_frame = ttk.Frame(filters_frame)
+        date_frame.grid(row=0, column=1, sticky=W, pady=3)
+
+        self.date_start = DateEntry(
+            date_frame,
+            bootstyle="info",
+            dateformat="%d/%m/%Y",
+            startdate=start_of_week
+        )
+        self.date_start.pack(side=LEFT)
+
+        ttk.Label(date_frame, text="hasta").pack(side=LEFT, padx=5)
+
+        self.date_end = DateEntry(
+            date_frame,
+            bootstyle="info",
+            dateformat="%d/%m/%Y"
+        )
+        self.date_end.pack(side=LEFT)
+
+        ttk.Button(
+            date_frame,
+            text="Filtrar",
+            command=self.on_filter,
+            bootstyle="info-outline"
+        ).pack(side=LEFT, padx=(10, 5))
+
+        ttk.Button(
+            date_frame,
+            text="Limpiar",
+            command=self.clear_date_filter,
+            bootstyle="secondary-outline"
+        ).pack(side=LEFT)
+
+        # --- Fila 1: Estado de entrega ---
+        ttk.Label(
+            filters_frame,
+            text="Estado de entrega:",
+            width=label_width,
+            anchor=W
+        ).grid(row=1, column=0, sticky=W, pady=3)
+
+        status_btns_frame = ttk.Frame(filters_frame)
+        status_btns_frame.grid(row=1, column=1, sticky=W, pady=3)
+
+        self.status_var = ttk.StringVar(value=ORDER_STATUSES_ALL)
+        for key, info in ORDER_STATUSES.items():
             ttk.Radiobutton(
-                filter_frame,
-                text=text,
+                status_btns_frame,
+                text=info["label"],
                 variable=self.status_var,
-                value=value,
+                value=key,
                 command=self.on_filter,
-                bootstyle="info-toolbutton"
-            ).pack(side=LEFT, padx=5)
+                bootstyle=f"{info['color']}-toolbutton"
+            ).pack(side=LEFT, padx=(0, 5))
 
-    def setup_customer_filter(self):
-        customer_filter_frame = ttk.Frame(self)
-        customer_filter_frame.pack(fill=X, padx=10, pady=(0, 10))
+        # --- Fila 2: Estado de pago ---
+        ttk.Label(
+            filters_frame,
+            text="Estado de pago:",
+            width=label_width,
+            anchor=W
+        ).grid(row=2, column=0, sticky=W, pady=3)
 
-        ttk.Label(customer_filter_frame, text="Filtrar por cliente:").pack(side=LEFT)
+        payment_btns_frame = ttk.Frame(filters_frame)
+        payment_btns_frame.grid(row=2, column=1, sticky=W, pady=3)
+
+        self.payment_status_var = ttk.StringVar(value=PAYMENT_STATUS_ALL)
+        for key, info in PAYMENT_STATUSES.items():
+            ttk.Radiobutton(
+                payment_btns_frame,
+                text=info["label"],
+                variable=self.payment_status_var,
+                value=key,
+                command=self.on_filter,
+                bootstyle=f"{info['color']}-toolbutton"
+            ).pack(side=LEFT, padx=(0, 5))
+
+        # --- Fila 3: Cliente ---
+        ttk.Label(
+            filters_frame,
+            text="Cliente:",
+            width=label_width,
+            anchor=W
+        ).grid(row=3, column=0, sticky=W, pady=3)
+
+        customer_frame = ttk.Frame(filters_frame)
+        customer_frame.grid(row=3, column=1, sticky=W, pady=3)
 
         self.customer_search_var = ttk.StringVar()
         self.customer_search_var.trace_add('write', self.on_customer_search_change)
 
         self.customer_search_entry = ttk.Entry(
-            customer_filter_frame,
+            customer_frame,
             textvariable=self.customer_search_var,
             width=25
         )
-        self.customer_search_entry.pack(side=LEFT, padx=(5, 0))
+        self.customer_search_entry.pack(side=LEFT)
 
         self.customer_filter_label = ttk.Label(
-            customer_filter_frame,
+            customer_frame,
             text="Todos los clientes",
             font=("Arial", 10),
             bootstyle="secondary"
@@ -82,7 +165,7 @@ class OrdersHeaderWithFilters(ttk.Frame):
         self.customer_filter_label.pack(side=LEFT, padx=(10, 0))
 
         self.btn_clear_customer = ttk.Button(
-            customer_filter_frame,
+            customer_frame,
             text="X",
             command=self.clear_customer_filter,
             bootstyle="danger-outline",
@@ -96,6 +179,24 @@ class OrdersHeaderWithFilters(ttk.Frame):
 
     def get_status_filter(self):
         return self.status_var.get()
+
+    def get_payment_status_filter(self):
+        return self.payment_status_var.get()
+
+    def get_date_filter(self):
+        start = self.date_start.entry.get()
+        end = self.date_end.entry.get()
+        try:
+            start_date = datetime.strptime(start, "%d/%m/%Y").date()
+            end_date = datetime.strptime(end, "%d/%m/%Y").date()
+            return start_date, end_date
+        except ValueError:
+            return None
+
+    def clear_date_filter(self):
+        self.date_start.entry.delete(0, "end")
+        self.date_end.entry.delete(0, "end")
+        self.on_filter()
 
     def get_customer_filter(self):
         return self.selected_customer_filter

@@ -1,6 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from app.constants import ORDER_STATUSES_ALL
+from app.constants import ORDER_STATUSES_ALL, PAYMENT_STATUS_ALL
 from app.data.providers.orders import order_provider
 from app.data.providers.customers import customer_provider
 from app.gui.sales.admin_sales.orders.orders_header_with_filters import OrdersHeaderWithFilters
@@ -64,11 +64,17 @@ class OrderContent(ttk.Frame):
 
     def filter_orders(self):
         status_filter = self.header.get_status_filter()
+        payment_status_filter = self.header.get_payment_status_filter()
+        date_filter = self.header.get_date_filter()
         customer_filter = self.header.get_customer_filter()
 
         filters = []
         if status_filter != ORDER_STATUSES_ALL:
             filters += order_provider.build_status_filter(status_filter)
+        if payment_status_filter and payment_status_filter != PAYMENT_STATUS_ALL:
+            filters += order_provider.build_payment_status_filter(payment_status_filter)
+        if date_filter:
+            filters += order_provider.build_date_range_filter(*date_filter)
         if customer_filter:
             filters += order_provider.build_customer_filter(customer_filter)
 

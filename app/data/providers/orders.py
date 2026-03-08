@@ -1,8 +1,14 @@
 from app.models import Order, OrderDetail
 from app.models.order_refund import OrderRefund
-from sqlalchemy import func, cast, Date
+from sqlalchemy import func, cast, Date, case, literal
 from app.data.database import get_db
-from app.constants import mexico_now
+from app.constants import (
+    mexico_now,
+    PAYMENT_STATUS_UNPAID,
+    PAYMENT_STATUS_PARTIAL,
+    PAYMENT_STATUS_PAID,
+    ORDER_STATUSES_PENDING,
+)
 
 
 class OrderProvider:
@@ -86,6 +92,22 @@ class OrderProvider:
     def build_customer_filter(self, customer_id):
         return [Order.customer_id == customer_id]
 
+    def build_payment_status_filter(self, payment_status):
+        paid = func.coalesce(Order.amount_paid, 0.0)
+        if payment_status == PAYMENT_STATUS_UNPAID:
+            return [paid <= 0]
+        elif payment_status == PAYMENT_STATUS_PARTIAL:
+            return [paid > 0, paid < Order.total]
+        elif payment_status == PAYMENT_STATUS_PAID:
+            return [paid >= Order.total]
+        return []
+
+    def build_date_range_filter(self, start_date, end_date):
+        return [
+            func.date(Order.date) >= start_date.isoformat(),
+            func.date(Order.date) <= end_date.isoformat()
+        ]
+
     def get_pending(self):
 
         db = get_db()
@@ -99,7 +121,7 @@ class OrderProvider:
                 Order.customer_id,
                 Order.amount_paid
             ).filter(
-                Order.status == 'pendiente'
+                Order.status == ORDER_STATUSES_PENDING
             ).order_by(Order.date.desc()).all()
             return orders
 
