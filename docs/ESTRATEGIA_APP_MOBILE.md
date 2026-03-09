@@ -22,16 +22,54 @@ mientras la app de escritorio sigue usando SQLite local (rapido).
    Si hay cambios → actualiza SQLite local
 ```
 
-## Flujo completo
-1. En escritorio se crea pedido → SQLite + Neon
-2. Repartidor abre APK → lee de Neon → ve sus pedidos
-3. Repartidor completa entrega → actualiza status en Neon
-4. App escritorio (polling 30seg) → detecta cambio → actualiza SQLite
+## Flujo completo (5 pasos)
+1. **Crear pedido**: El usuario crea un pedido en la app de escritorio → se guarda en SQLite + se inserta en Neon (en background)
+2. **Asignar repartidor**: Se asigna el pedido a un repartidor (ej: "José")
+3. **Repartidor ve pedido**: José abre la APK → la APK consulta Neon via API → ve sus pedidos pendientes
+4. **Repartidor completa**: José entrega y marca como completado → se actualiza status en Neon
+5. **Escritorio detecta cambio**: La app de escritorio (polling cada 30seg) detecta que el pedido paso de "pendiente" a "completado" en Neon → actualiza SQLite local → muestra toast/notificacion
 
-## Seguridad de la URI en la APK
-- Crear usuario de Neon con permisos limitados (solo SELECT/UPDATE en orders)
-- Considerar ofuscar la URI en la APK
-- Alternativa mas segura: mini API en servicio gratuito (Render/Railway)
+## Implementacion tecnica del polling (Paso 5)
+
+### Tkinter `after()` para polling en background
+```python
+# En la clase principal de la app (TortilleriaApp)
+def iniciar_polling_pedidos(self):
+    self._verificar_pedidos_neon()
+
+def _verificar_pedidos_neon(self):
+    # Ejecutar consulta a Neon en thread separado para no bloquear GUI
+    import threading
+    thread = threading.Thread(target=self._consultar_neon, daemon=True)
+    thread.start()
+    # Re-programar cada 30 segundos
+    self.root.after(30000, self._verificar_pedidos_neon)
+
+def _consultar_neon(self):
+    # Conectar a Neon, buscar pedidos con status cambiado
+    # Si hay cambios → actualizar SQLite local
+    # Mostrar toast en el hilo principal:
+    #   self.root.after(0, lambda: self._mostrar_toast("Pedido #123 completado"))
+    pass
+```
+
+### Toast / Notificacion
+- Usar `ttkbootstrap.toast.ToastNotification` o crear un widget custom
+- Aparece en esquina inferior derecha, se auto-cierra en 5 segundos
+- Muestra: "Pedido #XX completado por [repartidor]"
+
+## Seguridad
+
+### URI en la APK
+- **NO** exponer la URI de Neon directamente en la APK
+- Usar una **mini API** (FastAPI en Render/Railway, plan gratuito) como intermediario
+- La API valida al repartidor y solo expone endpoints necesarios:
+  - `GET /pedidos?repartidor=jose` → pedidos pendientes
+  - `PATCH /pedidos/{id}` → marcar como completado
+
+### Permisos en Neon
+- Crear usuario con permisos limitados (solo SELECT/UPDATE en tabla orders)
+- La API usa este usuario restringido
 
 ## Conexion Neon (ya creada)
 - Proyecto: Tortilleria
@@ -42,5 +80,7 @@ mientras la app de escritorio sigue usando SQLite local (rapido).
 ## Pendiente por definir
 - [ ] Framework para la APK (Flutter? React Native? Kotlin?)
 - [ ] Que datos exactos necesita ver el repartidor
-- [ ] Si usar conexion directa a Neon desde APK o mini API intermedia
+- [ ] Diseñar la mini API (FastAPI + hosting gratuito)
 - [ ] Modelo de datos para sincronizacion (campo updated_at, sync_status, etc.)
+- [ ] Autenticacion del repartidor en la APK
+- [ ] Tabla de repartidores (nombre, telefono, activo)
