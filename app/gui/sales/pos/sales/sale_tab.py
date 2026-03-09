@@ -85,7 +85,7 @@ class SaleTab(ttk.Frame):
             del self.shopping_cart[index]
 
             self.shopping_cart_gui.refresh_shopping_car()
-            self.products.show_products()
+            self.products.update_qty_display()
 
     def get_total(self):
         self.total = sum(item['subtotal'] for item in self.shopping_cart)
@@ -97,7 +97,7 @@ class SaleTab(ttk.Frame):
         self.shopping_cart = []
         self.total = 0.0
         self.shopping_cart_gui.refresh_shopping_car()
-        self.products.show_products()
+        self.products.update_qty_display()
 
     def charge(self):
 

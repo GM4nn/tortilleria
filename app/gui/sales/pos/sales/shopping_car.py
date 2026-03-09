@@ -163,27 +163,21 @@ class ShoppingCar(ttk.Frame):
 
     def refresh_shopping_car(self):
 
-        # Destroy scrollable_frame, canvas and scrollbar completely
-        if hasattr(self, 'scrollable_frame'):
-            self.scrollable_frame.destroy()
-        if hasattr(self, 'canvas'):
-            self.canvas.destroy()
-        if hasattr(self, 'scrollbar'):
-            self.scrollbar.destroy()
-
-        # Recreate canvas from scratch (scroll resets automatically)
-        self._create_canvas()
-
-        # Reset scroll to top after recreation
-        self.canvas.yview_moveto(0)
+        # Solo limpiar los widgets hijos, sin destruir el canvas
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
 
         if not self.content.shopping_cart:
             self.lbl_total.config(text="$0.00")
             self.lbl_items.config(text="0 items")
+            self.lbl_vacio = ttk.Label(
+                self.scrollable_frame,
+                text="Carrito vacío 🛒",
+                font=("Arial", 20),
+                bootstyle="secondary"
+            )
+            self.lbl_vacio.pack(pady=(0, 10))
             return
-
-        # Remove the empty label
-        self.lbl_vacio.destroy()
 
         for i, item in enumerate(self.content.shopping_cart):
             self.create_shopping_car_item(i, item)

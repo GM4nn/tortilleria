@@ -8,10 +8,13 @@ class Products(ttk.Frame):
         self.app = app
         self.content = content
 
+        # Refs a widgets por producto: {product_id: (lbl_qty, btn_minus)}
+        self._widgets = {}
+
         self.setup_ui()
         self.content.get_products()
         self.show_products()
-    
+
     def setup_ui(self):
 
         # Container with scroll
@@ -61,16 +64,15 @@ class Products(ttk.Frame):
         scrollbar.pack(side=RIGHT, fill=Y)
 
     def show_products(self):
-        """Mostrar productos en cards"""
-        # Clean frame
+        """Mostrar productos en cards (solo se llama 1 vez al inicio o al recargar inventario)"""
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
+        self._widgets.clear()
 
-        # Create card with for each product
         for product_id, icon, name, price in self.content.products_items:
-            self.product_card(product_id, icon, name, price)
+            self._create_product_card(product_id, icon, name, price)
 
-    def product_card(self, product_id, icon, name, price):
+    def _create_product_card(self, product_id, icon, name, price):
 
         card = ttk.Frame(
             self.scrollable_frame,
@@ -92,44 +94,44 @@ class Products(ttk.Frame):
         # Información del producto
         info_frame = ttk.Frame(card)
         info_frame.pack(side=LEFT, fill=BOTH, expand=YES, padx=(5, 15), pady=15)
-        
-        lbl_nombre = ttk.Label(
+
+        ttk.Label(
             info_frame,
             text=name,
             font=("Arial", 16, "bold")
-        )
-        lbl_nombre.pack(anchor=W)
-        
-        lbl_precio = ttk.Label(
+        ).pack(anchor=W)
+
+        ttk.Label(
             info_frame,
             text=f"${price:.2f}",
             font=("Arial", 18),
             bootstyle="success"
-        )
-        lbl_precio.pack(anchor=W, pady=(5, 0))
-        
+        ).pack(anchor=W, pady=(5, 0))
+
         # Quantity selector: [ − ] qty [ + ]
         qty_frame = ttk.Frame(card)
         qty_frame.pack(side=RIGHT, padx=15, pady=15)
 
         current_qty = self._get_cart_qty(product_id)
 
-        ttk.Button(
+        btn_minus = ttk.Button(
             qty_frame,
             text="−",
             command=lambda pid=product_id: self._decrement(pid),
             bootstyle="danger-outline",
             width=3,
             state="normal" if current_qty > 0 else "disabled"
-        ).pack(side=LEFT, ipady=8)
+        )
+        btn_minus.pack(side=LEFT, ipady=8)
 
-        ttk.Label(
+        lbl_qty = ttk.Label(
             qty_frame,
             text=str(current_qty),
             font=("Arial", 18, "bold"),
             width=3,
             anchor="center"
-        ).pack(side=LEFT, padx=8)
+        )
+        lbl_qty.pack(side=LEFT, padx=8)
 
         ttk.Button(
             qty_frame,
@@ -138,6 +140,21 @@ class Products(ttk.Frame):
             bootstyle="success",
             width=3
         ).pack(side=LEFT, ipady=8)
+
+        # Guardar refs para actualizar sin reconstruir
+        self._widgets[product_id] = (lbl_qty, btn_minus)
+
+    def update_qty_display(self, product_id=None):
+        """Actualiza SOLO el numero y el boton - de un producto (o todos si no se pasa id)"""
+        ids_to_update = [product_id] if product_id else list(self._widgets.keys())
+
+        for pid in ids_to_update:
+            if pid not in self._widgets:
+                continue
+            lbl_qty, btn_minus = self._widgets[pid]
+            qty = self._get_cart_qty(pid)
+            lbl_qty.config(text=str(qty))
+            btn_minus.config(state="normal" if qty > 0 else "disabled")
 
     def _get_cart_qty(self, product_id):
         return next((item['quantity'] for item in self.content.shopping_cart if item['id'] == product_id), 0)
@@ -150,17 +167,16 @@ class Products(ttk.Frame):
                 'price': price
             }
         )
-        self.show_products()
+        self.update_qty_display(product_id)
 
     def _decrement(self, product_id):
         self.content.remove_one_from_car(product_id)
-        self.show_products()
+        self.update_qty_display(product_id)
 
     # mouse events
 
     def _on_mousewheel(self, event):
         """Handle mouse wheel scrolling"""
-        # Windows uses event.delta, Linux/Mac use event.num
         if event.num == 4 or event.delta > 0:
             self.canvas.yview_scroll(-1, "units")
         elif event.num == 5 or event.delta < 0:
@@ -169,9 +185,7 @@ class Products(ttk.Frame):
 
     def _bind_mousewheel(self):
         """Bind mouse wheel events when mouse enters canvas"""
-        # Windows and MacOS
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        # Linux
         self.canvas.bind_all("<Button-4>", self._on_mousewheel)
         self.canvas.bind_all("<Button-5>", self._on_mousewheel)
 
