@@ -4,13 +4,14 @@ import tkinter as tk
 from app.gui.navigation import Navigation
 from app.data.providers.inventory import inventory_provider
 from app.data.providers.customers import customer_provider
-
+from app.bootstrap import init
 
 class TortilleriaApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Tortillería Tierra Del Campo")
         self.root.geometry("1200x700")
+        self.root.iconbitmap("icono.ico")
         self.root.iconphoto(True, ttk.PhotoImage(file="tortilleria_logo.png"))
 
         # Main Container
@@ -31,6 +32,10 @@ class TortilleriaApp:
 
 
 def main():
+    
+    # to production
+    init()
+
     # Initialize default products if database is empty
     inventory_provider._add_default_products()
 
