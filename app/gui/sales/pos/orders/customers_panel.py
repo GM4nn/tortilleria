@@ -3,14 +3,17 @@ from ttkbootstrap.constants import *
 
 
 class CustomersPanel(ttk.Labelframe):
-    
+
     def __init__(self, parent, on_customer_selected):
-        
+
         super().__init__(parent, text="  Seleccionar Cliente  ", padding=10, width=280)
 
         self.on_customer_selected = on_customer_selected
         self.selected_customer = None
         self.customers_list = []
+
+        # Refs: {customer_id: (card_frame, content_frame, name_label, cat_label)}
+        self._cards = {}
 
         self.pack_propagate(False)
         self.setup_ui()
@@ -63,12 +66,13 @@ class CustomersPanel(ttk.Labelframe):
 
     def load(self, customers):
         self.customers_list = customers
-        self.display()
+        self._build_cards()
 
-    def display(self, filter_text=""):
-
+    def _build_cards(self, filter_text=""):
+        """Construye las cards una sola vez (o al filtrar)."""
         for widget in self.inner_frame.winfo_children():
             widget.destroy()
+        self._cards.clear()
 
         filtered = self.customers_list
 
@@ -88,12 +92,28 @@ class CustomersPanel(ttk.Labelframe):
             self._create_card(customer)
 
     def set_selected(self, customer):
+        """Solo cambia el estilo visual, sin reconstruir."""
+        prev = self.selected_customer
         self.selected_customer = customer
-        self.display(self.search_var.get())
+
+        # Quitar highlight del anterior
+        if prev and prev.id in self._cards:
+            self._update_card_style(prev.id, "light")
+
+        # Poner highlight al nuevo
+        if customer and customer.id in self._cards:
+            self._update_card_style(customer.id, "info")
+
+    def _update_card_style(self, customer_id, style):
+        if customer_id not in self._cards:
+            return
+        card = self._cards[customer_id]
+        card.configure(bootstyle=style)
 
     def clear_selection(self):
+        if self.selected_customer and self.selected_customer.id in self._cards:
+            self._update_card_style(self.selected_customer.id, "light")
         self.selected_customer = None
-        self.display()
 
     def _create_card(self, customer):
         is_selected = self.selected_customer and self.selected_customer.id == customer.id
@@ -118,8 +138,10 @@ class CustomersPanel(ttk.Labelframe):
             widget.bind("<Button-1>", lambda e, c=customer: self.on_customer_selected(c))
             widget.configure(cursor="hand2")
 
+        self._cards[customer.id] = card
+
     def _on_filter(self, *args):
-        self.display(self.search_var.get())
+        self._build_cards(self.search_var.get())
 
     def _on_mousewheel(self, event):
         if event.num == 4 or event.delta > 0:
