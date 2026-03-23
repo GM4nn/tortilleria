@@ -4,6 +4,7 @@ import tkinter as tk
 from app.gui.navigation import Navigation
 from app.data.providers.inventory import inventory_provider
 from app.data.providers.customers import customer_provider
+from app.data.providers.supplies import supply_provider
 from app.bootstrap import init
 
 class TortilleriaApp:
@@ -41,6 +42,9 @@ def main():
 
     # Initialize generic Mostrador customer (hidden from user)
     customer_provider._create_generic_mostrador_customer()
+
+    # Initialize default supplies (Luz CFE, GAS NIETO)
+    supply_provider.ensure_default_supplies()
 
     root = ttk.Window(themename="flatly")
     TortilleriaApp(root)

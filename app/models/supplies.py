@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Date, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.data.database import Base
@@ -13,6 +13,7 @@ class Supply(Base):
     supply_name = Column(String(100), nullable=False, unique=True)  # Nombre del insumo (Maíz, Harina, etc.)
     supplier_id = Column(Integer, ForeignKey('suppliers.id'), nullable=False)  # Proveedor principal
     unit = Column(String(50), nullable=False, default="kilos")  # Unidad de medida (kilos, litros, piezas, etc.)
+    is_default = Column(Boolean, nullable=False, default=False)  # Insumos del sistema que no se pueden eliminar
     created_at = Column(DateTime, default=mexico_now)
     updated_at = Column(DateTime, default=mexico_now, onupdate=mexico_now)
 

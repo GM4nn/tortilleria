@@ -1,12 +1,54 @@
+import csv
+from pathlib import Path
+
 from app.models import Supply, SupplyPurchase, Supplier
 from sqlalchemy.orm import joinedload
 from app.data.database import get_db
 from datetime import datetime, date
 from app.constants import mexico_now
 
+DEFAULT_SUPPLIES_CSV = Path(__file__).parent.parent / "default" / "default_supplies.csv"
+
 
 class SupplyProvider:
 
+
+    # ===== DEFAULT SUPPLIES =====
+
+    def ensure_default_supplies(self):
+        """Load default supplies from CSV if they don't exist yet.
+        Creates the supplier automatically if needed."""
+        db = get_db()
+        try:
+            with open(DEFAULT_SUPPLIES_CSV, newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    exists = db.query(Supply).filter(
+                        Supply.supply_name == row["supply_name"]
+                    ).first()
+                    if exists:
+                        continue
+
+                    supplier = db.query(Supplier).filter(
+                        Supplier.supplier_name == row["supplier_name"]
+                    ).first()
+                    if not supplier:
+                        supplier = Supplier(
+                            supplier_name=row["supplier_name"],
+                            product_type="Servicio",
+                            active=True,
+                        )
+                        db.add(supplier)
+                        db.flush()
+
+                    db.add(Supply(
+                        supply_name=row["supply_name"],
+                        supplier_id=supplier.id,
+                        unit=row["unit"],
+                        is_default=True,
+                    ))
+            db.commit()
+        finally:
+            db.close()
 
     # ===== SUPPLIES (Insumos) =====
 
@@ -24,6 +66,7 @@ class SupplyProvider:
                     'supplier_id': s.supplier_id,
                     'supplier_name': s.supplier.supplier_name if s.supplier else 'N/A',
                     'unit': s.unit,
+                    'is_default': s.is_default,
                     'created_at': s.created_at,
                     'updated_at': s.updated_at
                 }
@@ -133,6 +176,8 @@ class SupplyProvider:
 
         try:
             supply = db.query(Supply).filter(Supply.id == supply_id).first()
+            if supply and supply.is_default:
+                return False, "No se puede eliminar un insumo del sistema"
             if supply:
                 db.delete(supply)
                 db.commit()

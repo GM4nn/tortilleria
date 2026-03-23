@@ -117,7 +117,7 @@ CUSTOMER_CATEGORIES = {
 }
 
 # SUPPLY UNITS
-SUPPLY_UNITS = ["kilos", "litros", "piezas", "costales", "bultos", "cajas"]
+SUPPLY_UNITS = ["kilos", "litros", "piezas", "costales", "bultos", "cajas", "servicio"]
 
 # AI ASSISTANT
 

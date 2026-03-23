@@ -15,6 +15,7 @@ class SupplyForm(ttk.Frame):
         self.provider = supply_provider
         self.on_close_callback = on_close_callback
         self.selected_supply_id = None
+        self.is_default_supply = False
 
         self.setup_ui()
 
@@ -119,13 +120,14 @@ class SupplyForm(ttk.Frame):
             width=20
         ).pack(fill=X, pady=5)
 
-        ttk.Button(
+        self.delete_btn = ttk.Button(
             btn_frame,
             text="Eliminar",
             command=self.delete_supply,
             bootstyle="danger",
             width=20
-        ).pack(fill=X, pady=5)
+        )
+        self.delete_btn.pack(fill=X, pady=5)
 
         ttk.Button(
             btn_frame,
@@ -198,6 +200,10 @@ class SupplyForm(ttk.Frame):
             Messagebox.show_warning("Seleccione un insumo para eliminar", "Advertencia")
             return
 
+        if self.is_default_supply:
+            Messagebox.show_warning("Este insumo es del sistema y no se puede eliminar", "Advertencia")
+            return
+
         confirm = Messagebox.yesno(
             f"¿Está seguro que desea eliminar el insumo '{self.name_var.get()}'?",
             "Confirmar eliminación"
@@ -217,17 +223,25 @@ class SupplyForm(ttk.Frame):
     def load_supply(self, supply_data):
         """Load supply data for editing"""
         self.selected_supply_id = supply_data['id']
+        self.is_default_supply = supply_data.get('is_default', False)
         self.id_label.configure(text=str(supply_data['id']))
         self.title_label.configure(text="Editar Insumo")
         self.name_var.set(supply_data['supply_name'])
         self.supplier_var.set(supply_data['supplier_name'])
         self.unit_var.set(supply_data.get('unit', 'kilos'))
 
+        if self.is_default_supply:
+            self.delete_btn.configure(state="disabled")
+        else:
+            self.delete_btn.configure(state="normal")
+
     def clear_form(self):
         """Clear the form"""
         self.selected_supply_id = None
+        self.is_default_supply = False
         self.id_label.configure(text="Nuevo")
         self.title_label.configure(text="Nuevo Insumo")
         self.name_var.set("")
         self.supplier_var.set("")
         self.unit_combo.current(0)
+        self.delete_btn.configure(state="normal")
