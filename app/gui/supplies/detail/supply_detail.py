@@ -37,10 +37,13 @@ class SupplyDetailView(ttk.Frame):
         self.tab_content_frame = ttk.Frame(self.left_frame)
         self.tab_content_frame.pack(fill=BOTH, expand=YES)
 
-        # Right: sidebar para purchase form (manejado por HistoryContent)
+        # Right: sidebar para purchase form (solo si no es default)
+        self.is_default = self.supply_data.get('is_default', False)
         self.right_frame = ttk.Frame(self, width=400)
         self.right_frame.pack_propagate(False)
-        self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
+
+        if not self.is_default:
+            self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
 
         self._show_history_tab()
 
@@ -93,7 +96,8 @@ class SupplyDetailView(ttk.Frame):
         if tab_name == "history":
             self.history_btn.configure(bootstyle="primary")
             self.periods_btn.configure(bootstyle="secondary-outline")
-            self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
+            if not self.is_default:
+                self.right_frame.pack(side=RIGHT, fill=BOTH, padx=(5, 0))
             self._show_history_tab()
         else:
             self.history_btn.configure(bootstyle="secondary-outline")

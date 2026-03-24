@@ -36,9 +36,12 @@ class SupplyProvider:
                             supplier_name=row["supplier_name"],
                             product_type="Servicio",
                             active=True,
+                            is_default=True,
                         )
                         db.add(supplier)
                         db.flush()
+                    elif not supplier.is_default:
+                        supplier.is_default = True
 
                     db.add(Supply(
                         supply_name=row["supply_name"],
@@ -49,6 +52,86 @@ class SupplyProvider:
             db.commit()
         finally:
             db.close()
+
+    def sync_cfe_invoices(self, supply_id, invoices):
+        """Sync CFE scraper invoices into supply purchases.
+        Only inserts invoices that don't already exist (by folio)."""
+        db = get_db()
+        try:
+            supply = db.query(Supply).filter(Supply.id == supply_id).first()
+            if not supply:
+                return 0
+
+            existing_notes = {
+                p.notes for p in supply.purchases if p.notes
+            }
+
+            added = 0
+            for inv in invoices:
+                folio_key = f"CFE-{inv.series}-{inv.folio}"
+
+                if folio_key in existing_notes:
+                    continue
+
+                # Parse period end date as purchase date
+                purchase_date = self._parse_cfe_date(inv.period.date_to)
+                if not purchase_date:
+                    purchase_date = date.today()
+
+                total = float(inv.charge.total) if inv.charge.total else 0.0
+                kwh = float(inv.consumption.total_kwh) if inv.consumption.total_kwh else 0.0
+                days = float(inv.period.days) if inv.period.days else 1.0
+                unit_price = total / kwh if kwh > 0 else total
+
+                purchase = SupplyPurchase(
+                    supply_id=supply_id,
+                    supplier_id=supply.supplier_id,
+                    purchase_date=purchase_date,
+                    quantity=kwh,
+                    unit="kWh",
+                    unit_price=round(unit_price, 4),
+                    total_price=total,
+                    remaining=0.0,
+                    notes=folio_key,
+                )
+                db.add(purchase)
+                added += 1
+
+            db.commit()
+            return added
+        except Exception:
+            db.rollback()
+            return 0
+        finally:
+            db.close()
+
+    def has_purchases(self, supply_id) -> bool:
+        """Check if a supply has any purchases."""
+        db = get_db()
+        try:
+            return db.query(SupplyPurchase).filter(
+                SupplyPurchase.supply_id == supply_id
+            ).count() > 0
+        finally:
+            db.close()
+
+    @staticmethod
+    def _parse_cfe_date(date_str: str):
+        """Parse CFE date format like '19 DIC 25' to a date object."""
+        months = {
+            "ENE": 1, "FEB": 2, "MAR": 3, "ABR": 4, "MAY": 5, "JUN": 6,
+            "JUL": 7, "AGO": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DIC": 12,
+        }
+        try:
+            parts = date_str.strip().split()
+            day = int(parts[0])
+            month = months.get(parts[1].upper(), 1)
+            year = int(parts[2])
+            if year < 100:
+                year += 2000
+            return date(year, month, day)
+        except (ValueError, IndexError):
+            return None
 
     # ===== SUPPLIES (Insumos) =====
 
@@ -93,6 +176,7 @@ class SupplyProvider:
                     'supplier_id': supply.supplier_id,
                     'supplier_name': supply.supplier.supplier_name if supply.supplier else 'N/A',
                     'unit': supply.unit,
+                    'is_default': supply.is_default,
                     'purchases': sorted(
                         [
                             {

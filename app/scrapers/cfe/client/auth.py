@@ -3,19 +3,16 @@
 import requests
 from bs4 import BeautifulSoup
 
-from app.scrapers.cfe.config import (
-    CFE_USER,
-    CFE_PASSWORD,
-    LOGIN_URL,
-    USER_AGENT,
-)
+from app.scrapers.cfe.config import LOGIN_URL, USER_AGENT
 from app.scrapers.cfe.client.aspnet import AspNetForm
 
 
 class CfeSession:
     """Manages the authenticated session against the CFE portal."""
 
-    def __init__(self):
+    def __init__(self, user: str, password: str):
+        self.user = user
+        self.password = password
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": USER_AGENT})
 
@@ -28,8 +25,8 @@ class CfeSession:
 
         payload = {
             **hidden_fields,
-            "ctl00$MainContent$txtUsuario": CFE_USER,
-            "ctl00$MainContent$txtPassword": CFE_PASSWORD,
+            "ctl00$MainContent$txtUsuario": self.user,
+            "ctl00$MainContent$txtPassword": self.password,
             "ctl00$MainContent$btnIngresar": "Ingresar",
         }
 

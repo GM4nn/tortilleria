@@ -1,10 +1,6 @@
 """Configuration and constants for the CFE scraper."""
 
 
-# Credentials
-CFE_USER = "germancodeg1"
-CFE_PASSWORD = "Lomismoxd123%"
-
 # URLs
 LOGIN_URL = "https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/Login.aspx"
 INVOICES_URL = "https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/OtrasFacturas.aspx"

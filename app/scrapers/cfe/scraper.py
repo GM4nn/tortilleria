@@ -1,4 +1,4 @@
-"""Orchestrator: authentication -> download -> parsing -> presentation."""
+"""Orchestrator: authentication -> download -> parsing -> return invoices."""
 
 import xml.etree.ElementTree as ET
 
@@ -7,11 +7,11 @@ from app.scrapers.cfe.parsers import CfdiParser
 from app.scrapers.cfe.schemas import Invoice
 
 
-def main() -> list[Invoice]:
-    """Run the full CFE scraping pipeline and return parsed invoices."""
+def scrape_cfe(user: str, password: str) -> list[Invoice]:
+    """Run the full CFE scraping pipeline with the given credentials."""
 
     # Step 1: Authentication
-    cfe = CfeSession()
+    cfe = CfeSession(user, password)
     if not cfe.login():
         return []
 

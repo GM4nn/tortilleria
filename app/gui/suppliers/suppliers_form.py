@@ -13,6 +13,7 @@ class SuppliersForm(ttk.Frame):
         self.provider = supplier_provider
         self.main_container = main_container
         self.selected_supplier_id = None
+        self.selected_supplier_is_default = False
 
         self.setup_ui()
 
@@ -225,6 +226,10 @@ class SuppliersForm(ttk.Frame):
             messagebox.showwarning("Advertencia", "Seleccione un proveedor para eliminar")
             return
 
+        if self.selected_supplier_is_default:
+            messagebox.showwarning("Advertencia", "Este proveedor es del sistema y no se puede eliminar.")
+            return
+
         confirm = messagebox.askyesno(
             "Confirmar eliminación",
             f"¿Está seguro que desea eliminar al proveedor '{self.name_var.get()}'?"
@@ -248,6 +253,7 @@ class SuppliersForm(ttk.Frame):
     def clear_form(self):
 
         self.selected_supplier_id = None
+        self.selected_supplier_is_default = False
         self.id_label.config(text="Nuevo")
         self.name_var.set("")
         self.contact_var.set("")

@@ -24,7 +24,8 @@ class SupplierProvider:
                     s.product_type,
                     s.notes,
                     s.created_at,
-                    s.updated_at
+                    s.updated_at,
+                    s.is_default,
                 )
                 for s in suppliers
             ]
@@ -115,19 +116,21 @@ class SupplierProvider:
 
     def delete(self, supplier_id):
         """Soft delete a supplier (set active to False)"""
-        
+
         db = get_db()
-        
+
         try:
             supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
-            
-            if supplier:
-                supplier.active = False
-                db.commit()
-            
-                return True, "Proveedor eliminado"
-        
-            return False, "Proveedor no encontrado"
+
+            if not supplier:
+                return False, "Proveedor no encontrado"
+
+            if supplier.is_default:
+                return False, "No se puede eliminar un proveedor del sistema"
+
+            supplier.active = False
+            db.commit()
+            return True, "Proveedor eliminado"
         
         except Exception as e:
             db.rollback()

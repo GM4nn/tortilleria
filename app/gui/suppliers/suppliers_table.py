@@ -132,6 +132,7 @@ class SuppliersTable(ttk.Frame):
         if supplier and hasattr(self.parent, 'form_section'):
             form = self.parent.form_section
             form.selected_supplier_id = supplier_id
+            form.selected_supplier_is_default = supplier.get('is_default', False)
             form.id_label.config(text=str(supplier_id))
             form.name_var.set(supplier['name'])
             form.contact_var.set(supplier['contact_name'] or '')
@@ -177,7 +178,7 @@ class SuppliersTable(ttk.Frame):
         self.all_suppliers = []
 
         for (supplier_id, name, contact_name, phone, email, address,
-             city, product_type, notes, created_at, updated_at) in suppliers:
+             city, product_type, notes, created_at, updated_at, is_default) in suppliers:
             self.all_suppliers.append({
                 'id': supplier_id,
                 'name': name,
@@ -189,7 +190,8 @@ class SuppliersTable(ttk.Frame):
                 'product_type': product_type,
                 'notes': notes,
                 'created_at': created_at,
-                'updated_at': updated_at
+                'updated_at': updated_at,
+                'is_default': is_default,
             })
 
         self.display_suppliers(self.all_suppliers)

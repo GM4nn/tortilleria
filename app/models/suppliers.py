@@ -18,6 +18,7 @@ class Supplier(Base):
     created_at = Column(DateTime, default=mexico_now)
     updated_at = Column(DateTime, default=mexico_now, onupdate=mexico_now)
     active = Column(Boolean, default=True)
+    is_default = Column(Boolean, nullable=False, default=False)
 
     def __repr__(self):
         return f"<Supplier(id={self.id}, name='{self.supplier_name}')>"
