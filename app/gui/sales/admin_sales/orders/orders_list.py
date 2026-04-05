@@ -1,7 +1,7 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from app.constants import (
-    ORDER_STATUSES,
+    ORDER_STATUSES, ORDER_STATUSES_COMPLETE, ORDER_STATUSES_CANCEL,
     PAYMENT_STATUS_UNPAID, PAYMENT_STATUS_PARTIAL, PAYMENT_STATUS_PAID,
     PAYMENT_STATUSES,
 )
@@ -65,9 +65,19 @@ class OrdersList(ttk.Labelframe):
     def create_order_card(self, order):
         status_info = ORDER_STATUSES.get(order.status, {"label": order.status, "color": "secondary"})
 
+        amount_paid = getattr(order, 'amount_paid', 0) or 0
+        is_fully_done = order.status == ORDER_STATUSES_COMPLETE and amount_paid >= order.total
+
+        if order.status == ORDER_STATUSES_CANCEL:
+            card_color = "secondary"
+        elif is_fully_done:
+            card_color = "success"
+        else:
+            card_color = "warning"
+
         card = ttk.Frame(
             self.list_inner_frame,
-            bootstyle=status_info['color'],
+            bootstyle=card_color,
             relief="solid",
             borderwidth=2
         )
@@ -119,7 +129,7 @@ class OrdersList(ttk.Labelframe):
 
         ttk.Label(
             badges_frame,
-            text=f"  {status_info['label']}  ",
+            text=f"  Entrega: {status_info['label']}  ",
             font=("Arial", 9, "bold"),
             bootstyle=f"inverse-{status_info['color']}"
         ).pack(side=RIGHT)
@@ -136,7 +146,7 @@ class OrdersList(ttk.Labelframe):
         ps_info = PAYMENT_STATUSES[ps]
         ttk.Label(
             badges_frame,
-            text=f"  {ps_info['label']}  ",
+            text=f"  Pago: {ps_info['label']}  ",
             font=("Arial", 8, "bold"),
             bootstyle=f"inverse-{ps_info['color']}"
         ).pack(side=RIGHT, padx=(0, 5))

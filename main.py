@@ -5,7 +5,9 @@ from app.gui.navigation import Navigation
 from app.data.providers.inventory import inventory_provider
 from app.data.providers.customers import customer_provider
 from app.data.providers.supplies import supply_provider
+from app.services.firestore_listener import firestore_listener
 from app.bootstrap import init
+
 
 class TortilleriaApp:
     def __init__(self, root):
@@ -31,9 +33,11 @@ class TortilleriaApp:
         # Default View Products
         self.navigation.change_view("sales")
 
+        firestore_listener.start(self)
+
 
 def main():
-    
+
     # to production
     init()
 

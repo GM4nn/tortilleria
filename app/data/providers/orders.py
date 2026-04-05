@@ -10,11 +10,20 @@ from app.constants import (
     PAYMENT_STATUS_PAID,
     ORDER_STATUSES_PENDING,
 )
+from app.services.firestore_service import firestore_service
 
 
 class OrderProvider:
 
-    def save(self, items, total, customer_id, notes=None, amount_paid=0.0):
+    def save(
+        self,
+        items,
+        total,
+        customer_id,
+        notes=None,
+        amount_paid=0.0,
+        customer_name=""
+    ):
 
         db = get_db()
         try:
@@ -39,6 +48,17 @@ class OrderProvider:
                 db.add(detail)
 
             db.commit()
+
+            # Sync with Firestore
+            firestore_service.add_order(
+                order_id=order.id,
+                customer_name=customer_name,
+                items=items,
+                total=total,
+                amount_paid=amount_paid,
+                created_at=order.date.isoformat() if order.date else mexico_now().isoformat(),
+            )
+
             return True, order.id
         except Exception as e:
             db.rollback()
@@ -95,17 +115,20 @@ class OrderProvider:
 
     def build_payment_status_filter(self, payment_status):
         paid = func.coalesce(Order.amount_paid, 0.0)
+
         if payment_status == PAYMENT_STATUS_UNPAID:
             return [paid <= 0]
         elif payment_status == PAYMENT_STATUS_PARTIAL:
             return [paid > 0, paid < Order.total]
         elif payment_status == PAYMENT_STATUS_PAID:
             return [paid >= Order.total]
+
         return []
 
     def build_date_range_filter(self, start_date, end_date):
         start_dt = datetime(start_date.year, start_date.month, start_date.day)
         end_dt = datetime(end_date.year, end_date.month, end_date.day) + timedelta(days=1)
+        
         return [
             Order.date >= start_dt,
             Order.date < end_dt,
@@ -183,7 +206,11 @@ class OrderProvider:
         finally:
             db.close()
 
-    def update_status(self, order_id, new_status):
+    def update_status(
+        self,
+        order_id,
+        new_status
+    ):
 
         db = get_db()
 
@@ -192,6 +219,7 @@ class OrderProvider:
             if order:
                 order.status = new_status
                 db.commit()
+                firestore_service.update_order_status(order_id, new_status)
                 return True, order_id
             return False, "Pedido no encontrado"
         except Exception as e:
@@ -200,7 +228,29 @@ class OrderProvider:
         finally:
             db.close()
 
-    def register_payment(self, order_id, amount):
+    def sync_payment(
+        self,
+        order_id,
+        amount_paid
+    ):
+        db = get_db()
+
+        try:
+            order = db.query(Order).filter(Order.id == order_id).first()
+            if order:
+                order.amount_paid = amount_paid
+                db.commit()
+
+        except Exception:
+            db.rollback()
+        finally:
+            db.close()
+
+    def register_payment(
+        self,
+        order_id,
+        amount
+    ):
         db = get_db()
         try:
             order = db.query(Order).filter(Order.id == order_id).first()
@@ -215,6 +265,7 @@ class OrderProvider:
 
             order.amount_paid = new_paid
             db.commit()
+            firestore_service.sync_payment(order_id, new_paid)
             return True, order_id
         except Exception as e:
             db.rollback()
@@ -251,6 +302,7 @@ class OrderProvider:
             order.status = 'completado'
             order.completed_at = mexico_now()
             db.commit()
+            firestore_service.update_order_status(order_id, 'completado')
             return True, order_id
         except Exception as e:
             db.rollback()

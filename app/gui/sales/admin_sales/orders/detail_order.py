@@ -62,7 +62,12 @@ class DetailOrder(ttk.Labelframe):
         if order_data['status'] == ORDER_STATUSES_COMPLETE:
             self._show_refunds_section(order_data['id'])
 
-        if order_data['status'] == ORDER_STATUSES_PENDING:
+        is_fully_done = (
+            order_data['status'] == ORDER_STATUSES_COMPLETE
+            and order_data.get('payment_status') == PAYMENT_STATUS_PAID
+        )
+
+        if order_data['status'] != 'cancelado' and not is_fully_done:
             self._render_actions(order_data)
 
     def _render_header(self, order_data):
@@ -205,8 +210,8 @@ class DetailOrder(ttk.Labelframe):
         btn_frame = ttk.Frame(self.detail_content)
         btn_frame.pack(fill=X)
 
-        # Botón de registrar pago (solo si no está completamente pagado)
         payment_status = order_data.get('payment_status', 'Sin Pagar')
+
         if payment_status != PAYMENT_STATUS_PAID:
             ttk.Button(
                 btn_frame,
@@ -215,19 +220,20 @@ class DetailOrder(ttk.Labelframe):
                 bootstyle="info"
             ).pack(fill=X, pady=2)
 
-        ttk.Button(
-            btn_frame,
-            text="Marcar Completado",
-            command=lambda: self.complete_order(order_data),
-            bootstyle="success"
-        ).pack(fill=X, pady=2)
+        if order_data['status'] == ORDER_STATUSES_PENDING:
+            ttk.Button(
+                btn_frame,
+                text="Marcar Completado",
+                command=lambda: self.complete_order(order_data),
+                bootstyle="success"
+            ).pack(fill=X, pady=2)
 
-        ttk.Button(
-            btn_frame,
-            text="Cancelar Pedido",
-            command=lambda: self.update_order_status(order_data['id'], 'cancelado'),
-            bootstyle="danger-outline"
-        ).pack(fill=X, pady=2)
+            ttk.Button(
+                btn_frame,
+                text="Cancelar Pedido",
+                command=lambda: self.update_order_status(order_data['id'], 'cancelado'),
+                bootstyle="danger-outline"
+            ).pack(fill=X, pady=2)
 
     def _show_refunds_section(self, order_id):
         refunds = refund_provider.get_by_order(order_id)

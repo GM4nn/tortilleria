@@ -3,6 +3,7 @@ from ttkbootstrap.constants import *
 from app.constants import ORDER_STATUSES_ALL, PAYMENT_STATUS_ALL
 from app.data.providers.orders import order_provider
 from app.data.providers.customers import customer_provider
+from app.services.firestore_listener import firestore_listener
 from app.gui.sales.admin_sales.orders.orders_header_with_filters import OrdersHeaderWithFilters
 from app.gui.sales.admin_sales.orders.orders_list import OrdersList
 from app.gui.sales.admin_sales.orders.detail_order import DetailOrder
@@ -18,6 +19,9 @@ class OrderContent(ttk.Frame):
 
         self.setup_ui()
         self.load_orders()
+
+        # when the order change from the apk load all orders again ( refresh )
+        firestore_listener.on_order_changed = self.load_orders
 
     def setup_ui(self):
 

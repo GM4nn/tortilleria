@@ -138,6 +138,9 @@ QUICK_QUESTIONS = [
     "¿Cuáles son los productos más vendidos?"   
 ]
 
+ORDERS_COLLECTION = "orders"
+SERVICE_ACCOUNT_PATH = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), "serviceAccount.json")
+
 AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """ 
     DATABASE SCHEMA - Tortillería (SQLite):
 

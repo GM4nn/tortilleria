@@ -118,7 +118,8 @@ class OrderTab(ttk.Frame):
             items=self.order_items,
             total=total,
             customer_id=self.selected_customer.id,
-            amount_paid=amount_paid
+            amount_paid=amount_paid,
+            customer_name=self.selected_customer.customer_name
         )
 
         if success:
