@@ -102,6 +102,17 @@ class DetailOrder(ttk.Labelframe):
         ttk.Label(client_frame, text="Cliente:", font=("Arial", 10, "bold")).pack(side=LEFT)
         ttk.Label(client_frame, text=customer_name, font=("Arial", 10)).pack(side=LEFT, padx=(5, 0))
 
+        # Repartidor asignado
+        dealer_frame = ttk.Frame(self.detail_content)
+        dealer_frame.pack(fill=X, pady=(5, 0))
+
+        ttk.Label(dealer_frame, text="Repartidor:", font=("Arial", 10, "bold")).pack(side=LEFT)
+        ttk.Label(
+            dealer_frame,
+            text=order_data.get('default_dealer') or "Sin asignar",
+            font=("Arial", 10)
+        ).pack(side=LEFT, padx=(5, 0))
+
         # Estado de entrega
         status_frame = ttk.Frame(self.detail_content)
         status_frame.pack(fill=X, pady=(5, 0))

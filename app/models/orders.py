@@ -20,6 +20,7 @@ class Order(Base):
     completed_at = Column(DateTime, nullable=True)
     notes = Column(String(500), nullable=True)
     amount_paid = Column(Float, default=0.0)
+    default_dealer = Column(String(100), ForeignKey('dealers.username'), nullable=True)
 
     # Relationships
     order_details = relationship('OrderDetail', back_populates='order', cascade='all, delete-orphan')

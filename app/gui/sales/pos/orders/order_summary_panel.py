@@ -16,6 +16,7 @@ class OrderSummaryPanel(ttk.Frame):
 
         self.setup_gui_title()
         self.setup_gui_items()
+        self.setup_gui_dealer()
         self.setup_gui_payment()
         self.setup_gui_btn_actions()
 
@@ -83,6 +84,35 @@ class OrderSummaryPanel(ttk.Frame):
             bootstyle="secondary"
         )
         self.no_items_label.pack(pady=20)
+
+    def setup_gui_dealer(self):
+        dealer_frame = ttk.Labelframe(self, text="Repartidor", padding=10)
+        dealer_frame.pack(fill=X, pady=(0, 10))
+
+        self._dealers_by_label = {}
+        self.dealer_var = ttk.StringVar(value="Sin asignar")
+        self.dealer_combo = ttk.Combobox(
+            dealer_frame,
+            textvariable=self.dealer_var,
+            state="readonly",
+            values=["Sin asignar"]
+        )
+        self.dealer_combo.pack(fill=X)
+
+    def set_dealers(self, dealers):
+        self._dealers_by_label = {
+            (d.get("display_name") or d.get("username")): d.get("username")
+            for d in dealers
+            if d.get("username")
+        }
+        self.dealer_combo.config(values=["Sin asignar"] + list(self._dealers_by_label.keys()))
+        self.dealer_var.set("Sin asignar")
+
+    def get_dealer(self):
+        return self._dealers_by_label.get(self.dealer_var.get())
+
+    def reset_dealer(self):
+        self.dealer_var.set("Sin asignar")
 
     def setup_gui_payment(self):
         payment_frame = ttk.Labelframe(self, text="Anticipo / Pago", padding=10)

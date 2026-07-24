@@ -5,6 +5,7 @@ import tkinter as tk
 from app.gui.ai_assistant.content import AIAssistantContent
 from app.gui.suppliers.content import SuppliersContent
 from app.gui.customers.content import CustomersContent
+from app.gui.dealers.content import DealersContent
 from app.gui.inventory.content import InventoryContent
 from app.gui.supplies.content import SuppliesContent
 from app.gui.reports.content import ReportsContent
@@ -90,6 +91,7 @@ class Navigation(tk.Frame):
             ]),
             ("📈", "Reportes", "reports", True, None),
             ("👥", "Clientes", "customers", True, None),
+            ("🛵", "Repartidores", "dealers", True, None),
             ("🤖", "Asistente IA", "ai_assistant", True, None)
         ]
 
@@ -234,6 +236,7 @@ class Navigation(tk.Frame):
             "reports": lambda: ReportsContent(self.app.content_container, self.app),
             "inventory": lambda: InventoryContent(self.app.content_container, self.app),
             "customers": lambda: CustomersContent(self.app.content_container, self.app),
+            "dealers": lambda: DealersContent(self.app.content_container, self.app),
             "suppliers": lambda: SuppliersContent(self.app.content_container, self.app),
             "supplies": lambda: SuppliesContent(self.app.content_container, self.app),
             "ai_assistant": lambda: AIAssistantContent(self.app.content_container)

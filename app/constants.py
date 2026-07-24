@@ -139,6 +139,7 @@ QUICK_QUESTIONS = [
 ]
 
 ORDERS_COLLECTION = "orders"
+DEALERS_COLLECTION = "dealers"
 SERVICE_ACCOUNT_PATH = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), "serviceAccount.json")
 
 AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """ 
@@ -188,14 +189,16 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     → Para obtener proveedor: JOIN con suppliers usando supplier_id
 
     TABLE: orders
-    ✓ Tiene columnas: id, date, total, customer_id, status, completed_at, notes, amount_paid
+    ✓ Tiene columnas: id, date, total, customer_id, status, completed_at, notes, amount_paid, default_dealer
     ✓ SÍ tiene columnas de FECHA: date, completed_at
     ✓ date = fecha en que se creó el pedido
     ✓ completed_at = fecha en que se marcó como completado (NULL si no está completado)
     ✓ status puede ser: 'pendiente', 'completado', 'cancelado' (estado de entrega)
     ✓ amount_paid = monto pagado del pedido (0 = sin pagar, parcial = parcialmente pagado, igual a total = pagado)
     ✓ Estado de pago derivado: 'Sin Pagar' (amount_paid=0), 'Parcialmente Pagado' (0 < amount_paid < total), 'Pagado' (amount_paid >= total)
+    ✓ default_dealer = username del repartidor asignado al pedido (NULL si no tiene) - referencia a dealers.username
     → Para obtener cliente: JOIN con customers usando customer_id
+    → Para obtener repartidor: JOIN con dealers usando default_dealer = dealers.username
 
     TABLE: order_details
     ✓ Tiene columnas: id, order_id, product_id, quantity, unit_price, subtotal
@@ -226,6 +229,15 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     ✓ UniqueConstraint en (customer_id, product_id) - solo un precio por cliente por producto
     → Para obtener cliente: JOIN con customers usando customer_id
     → Para obtener producto: JOIN con products usando product_id
+
+    TABLE: dealers (repartidores)
+    ✓ Tiene columnas: id, username, pin, name, active, created_at
+    ✓ SÍ tiene columna de FECHA: created_at
+    ✓ username = identificador único del repartidor (con el que inicia sesión en la app móvil)
+    ✓ name = nombre visible del repartidor
+    ✓ active = 1 si está activo, 0 si fue dado de baja (borrado lógico)
+    ✓ ESTA ES LA TABLA DE REPARTIDORES: cuando el usuario pregunte por "repartidores", "quién repartió" o "quién entregó", USA ESTA TABLA
+    → Para saber sus pedidos: JOIN con orders usando dealers.username = orders.default_dealer
 
     ╔══════════════════════════════════════════════════════════════╗
     ║ RELACIONES (CÓMO HACER JOINs)                                ║
@@ -284,6 +296,10 @@ AI_ASSISTANT_SYSTEM_PROMPT_SCHEMA_DB = """
     FROM products p
     LEFT JOIN customer_product_prices cpp ON p.id = cpp.product_id AND cpp.customer_id = ?
     Úsalo cuando: Necesites saber el precio que paga un cliente específico
+
+    14. orders → dealers:
+    FROM orders o JOIN dealers d ON o.default_dealer = d.username
+    Úsalo cuando: Necesites el repartidor asignado a un pedido (o los pedidos de un repartidor)
 
     ╔══════════════════════════════════════════════════════════════╗
     ║ SINTAXIS SQLite PARA FECHAS                                  ║
@@ -358,6 +374,15 @@ AI_ASSISTANT_SYSTEM_PROMPT = f"""
         WHERE strftime('%Y-%m', o.date) = strftime('%Y-%m', 'now')
         GROUP BY p.id
         ORDER BY total DESC
+
+    Ejemplo 7 - Relación (orders → dealers por username):
+    Pregunta: "¿Cuántos pedidos entregó cada repartidor este mes?"
+    SQL: SELECT d.name, COUNT(o.id) as total_pedidos
+        FROM orders o
+        JOIN dealers d ON o.default_dealer = d.username
+        WHERE strftime('%Y-%m', o.date) = strftime('%Y-%m', 'now')
+        GROUP BY d.username
+        ORDER BY total_pedidos DESC
 
     PROCESO OBLIGATORIO PARA GENERAR SQL:
     1. Lee la pregunta del usuario

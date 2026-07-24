@@ -3,6 +3,7 @@ import firebase_admin
 import os
 from app.constants import (
     ORDERS_COLLECTION,
+    DEALERS_COLLECTION,
     ORDER_STATUSES_PENDING,
     SERVICE_ACCOUNT_PATH,
 )
@@ -37,7 +38,8 @@ class FirestoreService:
         items,
         total,
         amount_paid,
-        created_at
+        created_at,
+        default_dealer=None
     ):
 
         if not self.available:
@@ -63,12 +65,37 @@ class FirestoreService:
                     "amount_paid": amount_paid,
                     "status": ORDER_STATUSES_PENDING,
                     "created_at": created_at,
+                    "default_dealer": default_dealer,
                 }
             )
             return doc_ref.id
 
         except Exception as e:
             print(f"[Firestore] Error in sync order #{order_id}: {e}")
+
+    def upsert_dealer(self, username, pin, name):
+        if not self.available:
+            return
+
+        try:
+            self._db.collection(DEALERS_COLLECTION).document(username).set(
+                {
+                    "username": username,
+                    "pin": pin,
+                    "display_name": name,
+                }
+            )
+        except Exception as e:
+            print(f"[Firestore] Error upserting dealer {username}: {e}")
+
+    def delete_dealer(self, username):
+        if not self.available:
+            return
+
+        try:
+            self._db.collection(DEALERS_COLLECTION).document(username).delete()
+        except Exception as e:
+            print(f"[Firestore] Error deleting dealer {username}: {e}")
 
     def update_order_status(
         self,

@@ -38,18 +38,22 @@ class FirestoreOrderListener:
         status = data.get("status")
 
         amount_paid = data.get("amount_paid", 0)
-        self._app.root.after(0, self._handle_order_modified, order_id, status, amount_paid)
+        default_dealer = data.get("default_dealer")
+        self._app.root.after(0, self._handle_order_modified, order_id, status, amount_paid, default_dealer)
 
     def _handle_order_modified(
         self,
         order_id,
         status,
-        amount_paid
+        amount_paid,
+        default_dealer
     ):
         if status == ORDER_STATUSES_COMPLETE:
             order_provider.update_status(order_id, ORDER_STATUSES_COMPLETE)
 
         order_provider.sync_payment(order_id, amount_paid)
+        order_provider.sync_dealer(order_id, default_dealer)
+
         self._notify_change()
 
         if status == ORDER_STATUSES_COMPLETE:

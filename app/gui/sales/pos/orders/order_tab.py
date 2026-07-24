@@ -4,6 +4,7 @@ from ttkbootstrap.constants import *
 from app.data.providers.customers import customer_provider
 from app.data.providers.inventory import inventory_provider
 from app.data.providers.orders import order_provider
+from app.data.providers.dealers import dealer_provider
 from app.gui.sales.pos.orders.customers_panel import CustomersPanel
 from app.gui.sales.pos.orders.products_panel import ProductsPanel
 from app.gui.sales.pos.orders.order_summary_panel import OrderSummaryPanel
@@ -50,6 +51,7 @@ class OrderTab(ttk.Frame):
         products = inventory_provider.get_all()
         self.customers_panel.load(customers)
         self.products_panel.load(products)
+        self.summary_panel.set_dealers(dealer_provider.get_all_active_dicts())
 
     def select_customer(self, customer):
         self.selected_customer = customer
@@ -119,7 +121,8 @@ class OrderTab(ttk.Frame):
             total=total,
             customer_id=self.selected_customer.id,
             amount_paid=amount_paid,
-            customer_name=self.selected_customer.customer_name
+            customer_name=self.selected_customer.customer_name,
+            default_dealer=self.summary_panel.get_dealer()
         )
 
         if success:
@@ -141,6 +144,7 @@ class OrderTab(ttk.Frame):
         self.products_panel.hide_products()
         self.summary_panel.clear_customer()
         self.summary_panel.reset_payment()
+        self.summary_panel.reset_dealer()
         self._refresh_summary()
 
     def _refresh_summary(self):

@@ -22,7 +22,8 @@ class OrderProvider:
         customer_id,
         notes=None,
         amount_paid=0.0,
-        customer_name=""
+        customer_name="",
+        default_dealer=None
     ):
 
         db = get_db()
@@ -32,7 +33,8 @@ class OrderProvider:
                 customer_id=customer_id,
                 status='pendiente',
                 notes=notes,
-                amount_paid=amount_paid
+                amount_paid=amount_paid,
+                default_dealer=default_dealer
             )
             db.add(order)
             db.flush()
@@ -57,6 +59,7 @@ class OrderProvider:
                 total=total,
                 amount_paid=amount_paid,
                 created_at=order.date.isoformat() if order.date else mexico_now().isoformat(),
+                default_dealer=default_dealer,
             )
 
             return True, order.id
@@ -172,6 +175,7 @@ class OrderProvider:
                     'notes': order.notes,
                     'amount_paid': order.amount_paid or 0.0,
                     'payment_status': order.payment_status,
+                    'default_dealer': order.default_dealer,
                     'details': [
                         {
                             'product_id': d.product_id,
@@ -239,6 +243,24 @@ class OrderProvider:
             order = db.query(Order).filter(Order.id == order_id).first()
             if order:
                 order.amount_paid = amount_paid
+                db.commit()
+
+        except Exception:
+            db.rollback()
+        finally:
+            db.close()
+
+    def sync_dealer(
+        self,
+        order_id,
+        default_dealer
+    ):
+        db = get_db()
+
+        try:
+            order = db.query(Order).filter(Order.id == order_id).first()
+            if order and order.default_dealer != default_dealer:
+                order.default_dealer = default_dealer
                 db.commit()
 
         except Exception:
