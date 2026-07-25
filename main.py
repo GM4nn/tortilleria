@@ -7,6 +7,7 @@ from app.data.providers.customers import customer_provider
 from app.data.providers.supplies import supply_provider
 from app.services.firestore_listener import firestore_listener
 from app.bootstrap import init
+import os
 
 
 class TortilleriaApp:
@@ -14,8 +15,14 @@ class TortilleriaApp:
         self.root = root
         self.root.title("Tortillería Tierra Del Campo")
         self.root.geometry("1200x700")
-        icono = tk.PhotoImage(file="icono.png")
-        root.iconphoto(True, icono)
+
+        ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
+        
+        try:
+            root.iconphoto(True, tk.PhotoImage(file=ruta))
+        except Exception:
+            pass
+
         self.root.iconphoto(True, ttk.PhotoImage(file="tortilleria_logo.png"))
 
         # Main Container
