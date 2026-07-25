@@ -14,7 +14,8 @@ class TortilleriaApp:
         self.root = root
         self.root.title("Tortillería Tierra Del Campo")
         self.root.geometry("1200x700")
-        self.root.iconbitmap("icono.png")
+        icono = tk.PhotoImage(file="icono.png")
+        root.iconphoto(True, icono)
         self.root.iconphoto(True, ttk.PhotoImage(file="tortilleria_logo.png"))
 
         # Main Container
